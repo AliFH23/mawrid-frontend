@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate , Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -16,6 +16,8 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LoginIcon from '@mui/icons-material/Login';
 import api from '../api/axios.js';
+import { postAuthRedirect } from '../utils/postAuthRedirect.js';
+import AnimatedPage from '../components/AnimatedPage.jsx';
 
 function Login() {
   const navigate = useNavigate();
@@ -43,9 +45,7 @@ function Login() {
       localStorage.setItem('mawrid_token', token);
       localStorage.setItem('mawrid_user', JSON.stringify(user));
 
-      if (user.role === 'admin') navigate('/admin');
-      else if (user.role === 'supplier') navigate('/supplier');
-      else navigate('/shop');
+      await postAuthRedirect(user, navigate);
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء تسجيل الدخول');
     } finally {
@@ -64,8 +64,7 @@ function Login() {
         p: 2,
       }}
     >
-      <Paper sx={{ width: 460, p: 5, borderRadius: 5 }} elevation={0}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+      <Paper component={AnimatedPage} sx={{ width: 460, p: 5, borderRadius: 5 }} elevation={0}>        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
           <Box
             component="img"
             src="/logo/mawrid-mark-ink.png"
@@ -142,7 +141,7 @@ function Login() {
             <Typography variant="body2" fontWeight={700}>
               كلمة المرور
             </Typography>
-            <Link href="#" underline="hover" sx={{ fontSize: 13, fontWeight: 700, color: 'primary.dark' }}>
+            <Link component={RouterLink} to="/forgot-password" underline="hover" sx={{ fontSize: 13, fontWeight: 700, color: 'primary.dark' }}>
               نسيت كلمة المرور؟
             </Link>
           </Box>
@@ -177,7 +176,7 @@ function Login() {
 
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 3 }}>
           ما عندك حساب؟{' '}
-          <Link href="#" underline="hover" sx={{ fontWeight: 700, color: 'primary.dark' }}>
+          <Link component={RouterLink} to="/register" underline="hover" sx={{ fontWeight: 700, color: 'primary.dark' }}>
             أنشئ حساب جديد
           </Link>
         </Typography>
