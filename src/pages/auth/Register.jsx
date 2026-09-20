@@ -57,6 +57,8 @@ function Register() {
 
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
+  const [supplierRegNumber, setSupplierRegNumber] = useState('');
+  const [shopRegNumber, setShopRegNumber] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -87,11 +89,11 @@ function Register() {
     e.preventDefault();
     setError('');
 
-    if (role === 'buyer' && (!shopName || !selectedZone || selectedCategories.length === 0)) {
+    if (role === 'buyer' && (!shopName || !shopRegNumber || !selectedZone || selectedCategories.length === 0)) {
       setError('الرجاء تعبئة بيانات المحل كاملة');
       return;
     }
-    if (role === 'supplier' && !companyName) {
+    if (role === 'supplier' && (!companyName || !supplierRegNumber)) {
       setError('الرجاء إدخال اسم الشركة');
       return;
     }
@@ -107,6 +109,7 @@ function Register() {
         try {
           await api.post('/shops', {
             shopName,
+            commercialRegistrationNumber: shopRegNumber,
             deliveryZone: selectedZone._id,
             categoryIds: selectedCategories.map((c) => c._id),
           });
@@ -116,7 +119,7 @@ function Register() {
         }
       } else {
         try {
-          await api.post('/suppliers', { companyName, companyDescription });
+          await api.post('/suppliers', { companyName, companyDescription, commercialRegistrationNumber: supplierRegNumber });
           navigate('/supplier');
         } catch {
           navigate('/supplier/setup');
@@ -306,6 +309,17 @@ function Register() {
                   />
 
                   <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+                    الرقم التجاري / السجل التجاري
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="مثال: 123456"
+                    value={shopRegNumber}
+                    onChange={(e) => setShopRegNumber(e.target.value)}
+                    sx={{ mb: 2.5 }}
+                  />
+
+                  <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
                     فئات نشاطك (حتى {MAX_CATEGORIES} فئات)
                   </Typography>
                   <Autocomplete
@@ -365,6 +379,17 @@ function Register() {
                     placeholder="مثال: Ahmad Trading Co."
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
+                    sx={{ mb: 2.5 }}
+                  />
+
+                  <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+                    الرقم التجاري / السجل التجاري
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    placeholder="مثال: 123456"
+                    value={supplierRegNumber}
+                    onChange={(e) => setSupplierRegNumber(e.target.value)}
                     sx={{ mb: 2.5 }}
                   />
 

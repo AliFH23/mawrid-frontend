@@ -54,13 +54,14 @@ function AdminDashboard() {
   const totalCommission = purchaseOrders
     .filter((po) => po.status === 'CONFIRMED')
     .reduce((sum, po) => sum + po.supplierCommission + po.buyersCommission, 0);
+  const supplierCount = users.filter((u) => u.role === 'supplier').length;
+  const buyerCount = users.filter((u) => u.role === 'buyer').length;
 
   const navItems = [
     { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
     { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
     { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
-    { key: 'messages', label: 'رسائل التواصل', onClick: () => navigate('/admin/messages') },
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
@@ -102,6 +103,12 @@ function AdminDashboard() {
           </Grid>
           <Grid item xs={12} sm={6} md={3}>
             <StatCard label="إجمالي العمولات" value={`${totalCommission.toFixed(1)} د.أ`} />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard label="عدد الموردين" value={supplierCount} />
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <StatCard label="عدد المشاريع الصغيرة" value={buyerCount} />
           </Grid>
         </Grid>
 

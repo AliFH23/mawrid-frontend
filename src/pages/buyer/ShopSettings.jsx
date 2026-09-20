@@ -14,6 +14,7 @@ function ShopSettings() {
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [shopName, setShopName] = useState('');
+  const [regNumber, setRegNumber] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,11 +38,10 @@ function ShopSettings() {
         const s = shopRes.data.shop;
         setShop(s);
         setShopName(s.shopName);
+        setRegNumber(s.commercialRegistrationNumber || '');
         setSelectedCategories(s.categoryIds || []);
         setCategories(catRes.data.categories);
 
-        // deliveryZone.governorateId arrives as a full object (nested populate on the
-        // backend), so it slots directly into the hook's presetLocation
         if (s.deliveryZone?.governorateId) {
           presetLocation(s.deliveryZone.governorateId, s.deliveryZone);
         }
@@ -54,7 +54,7 @@ function ShopSettings() {
     e.preventDefault();
     setError('');
 
-    if (!shopName || !selectedZone || selectedCategories.length === 0) {
+    if (!shopName || !regNumber || !selectedZone || selectedCategories.length === 0) {
       setError('الرجاء تعبئة كل الحقول');
       return;
     }
@@ -63,6 +63,7 @@ function ShopSettings() {
     try {
       await api.put('/shops/me', {
         shopName,
+        commercialRegistrationNumber: regNumber,
         deliveryZone: selectedZone._id,
         categoryIds: selectedCategories.map((c) => c._id),
       });
@@ -116,6 +117,11 @@ function ShopSettings() {
               اسم المحل
             </Typography>
             <TextField fullWidth value={shopName} onChange={(e) => setShopName(e.target.value)} sx={{ mb: 2.5 }} />
+
+            <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+              الرقم التجاري / السجل التجاري
+            </Typography>
+            <TextField fullWidth value={regNumber} onChange={(e) => setRegNumber(e.target.value)} sx={{ mb: 2.5 }} />
 
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               فئات نشاطك (حتى {MAX_CATEGORIES} فئات)

@@ -10,6 +10,7 @@ function SupplierSetup() {
 
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
+  const [regNumber, setRegNumber] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -21,10 +22,14 @@ function SupplierSetup() {
       setError('الرجاء إدخال اسم الشركة');
       return;
     }
+    if (!regNumber) {
+      setError('الرجاء إدخال الرقم التجاري / السجل التجاري');
+      return;
+    }
 
     setLoading(true);
     try {
-      await api.post('/suppliers', { companyName, companyDescription });
+      await api.post('/suppliers', { companyName, companyDescription, commercialRegistrationNumber: regNumber });
       navigate('/supplier');
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء حفظ بيانات الشركة');
@@ -85,6 +90,17 @@ function SupplierSetup() {
             placeholder="مثال: Ahmad Trading Co."
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
+            sx={{ mb: 2.5 }}
+          />
+
+          <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+            الرقم التجاري / السجل التجاري
+          </Typography>
+          <TextField
+            fullWidth
+            placeholder="مثال: 123456"
+            value={regNumber}
+            onChange={(e) => setRegNumber(e.target.value)}
             sx={{ mb: 2.5 }}
           />
 

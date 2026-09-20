@@ -23,6 +23,7 @@ function ShopSetup() {
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [shopName, setShopName] = useState('');
+  const [regNumber, setRegNumber] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -44,7 +45,7 @@ function ShopSetup() {
     e.preventDefault();
     setError('');
 
-    if (!shopName || !selectedZone || selectedCategories.length === 0) {
+    if (!shopName || !regNumber || !selectedZone || selectedCategories.length === 0) {
       setError('الرجاء تعبئة كل الحقول واختيار فئة ومنطقة توصيل');
       return;
     }
@@ -53,6 +54,7 @@ function ShopSetup() {
     try {
       await api.post('/shops', {
         shopName,
+        commercialRegistrationNumber: regNumber,
         deliveryZone: selectedZone._id,
         categoryIds: selectedCategories.map((c) => c._id),
       });
@@ -116,6 +118,17 @@ function ShopSetup() {
             placeholder="مثال: بقالة أبو محمد"
             value={shopName}
             onChange={(e) => setShopName(e.target.value)}
+            sx={{ mb: 2.5 }}
+          />
+
+          <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+            الرقم التجاري / السجل التجاري
+          </Typography>
+          <TextField
+            fullWidth
+            placeholder="مثال: 123456"
+            value={regNumber}
+            onChange={(e) => setRegNumber(e.target.value)}
             sx={{ mb: 2.5 }}
           />
 

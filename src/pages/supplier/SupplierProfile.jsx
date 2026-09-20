@@ -10,6 +10,7 @@ function SupplierProfile() {
   const [supplier, setSupplier] = useState(null);
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
+  const [regNumber, setRegNumber] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -22,6 +23,7 @@ function SupplierProfile() {
         setSupplier(res.data.supplier);
         setCompanyName(res.data.supplier.companyName);
         setCompanyDescription(res.data.supplier.companyDescription || '');
+        setRegNumber(res.data.supplier.commercialRegistrationNumber || '');
       })
       .catch(() => setToast('تعذّر تحميل بيانات الشركة'))
       .finally(() => setLoading(false));
@@ -34,9 +36,13 @@ function SupplierProfile() {
       setError('الرجاء إدخال اسم الشركة');
       return;
     }
+    if (!regNumber) {
+      setError('الرجاء إدخال الرقم التجاري / السجل التجاري');
+      return;
+    }
     setSaving(true);
     try {
-      await api.put('/suppliers/me', { companyName, companyDescription });
+      await api.put('/suppliers/me', { companyName, companyDescription, commercialRegistrationNumber: regNumber });
       setToast('تم حفظ التعديلات ✓');
     } catch (err) {
       setError(err.response?.data?.message || 'تعذّر حفظ التعديلات');
@@ -94,6 +100,11 @@ function SupplierProfile() {
               اسم الشركة
             </Typography>
             <TextField fullWidth value={companyName} onChange={(e) => setCompanyName(e.target.value)} sx={{ mb: 2.5 }} />
+
+            <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+              الرقم التجاري / السجل التجاري
+            </Typography>
+            <TextField fullWidth value={regNumber} onChange={(e) => setRegNumber(e.target.value)} sx={{ mb: 2.5 }} />
 
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               وصف الشركة
