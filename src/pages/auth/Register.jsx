@@ -30,6 +30,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import api from '../../api/axios.js';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import { isPasswordStrong, PASSWORD_HINT } from '../../utils/passwordValidation.js';
+import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const MAX_CATEGORIES = 3;
 const STEPS = ['بيانات الحساب', 'بيانات النشاط'];
@@ -48,11 +49,11 @@ function Register() {
   const [shopName, setShopName] = useState('');
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [governorates, setGovernorates] = useState([]);
-  const [selectedGovernorate, setSelectedGovernorate] = useState(null);
-  const [zones, setZones] = useState([]);
-  const [selectedZone, setSelectedZone] = useState(null);
-  const [zonesLoading, setZonesLoading] = useState(false);
+
+  // governorate/zone cascading logic now comes from the shared hook instead of
+  // being duplicated in this file
+  const { governorates, zones, zonesLoading, selectedGovernorate, selectedZone, setSelectedGovernorate, setSelectedZone } =
+    useLocationPicker();
 
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
@@ -62,22 +63,7 @@ function Register() {
 
   useEffect(() => {
     api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
-    api.get('/governorates').then((res) => setGovernorates(res.data.governorates)).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!selectedGovernorate) {
-      setZones([]);
-      setSelectedZone(null);
-      return;
-    }
-    setZonesLoading(true);
-    setSelectedZone(null);
-    api
-      .get('/delivery-zones', { params: { governorateId: selectedGovernorate._id } })
-      .then((res) => setZones(res.data.zones))
-      .finally(() => setZonesLoading(false));
-  }, [selectedGovernorate]);
 
   const handleNext = () => {
     setError('');

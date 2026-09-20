@@ -20,6 +20,7 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const STATUS_STYLES = {
   OPEN: { label: 'سلة مفتوحة', bg: '#E7F8F0', color: '#047857' },
@@ -39,12 +40,12 @@ function AdminPools() {
 
   const [editingPool, setEditingPool] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [governorates, setGovernorates] = useState([]);
-  const [zones, setZones] = useState([]);
-  const [zonesLoading, setZonesLoading] = useState(false);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState('');
+
+  const { governorates, zones, zonesLoading, selectedGovernorate, selectedZone, setSelectedGovernorate, setSelectedZone, presetLocation } =
+    useLocationPicker();
 
   const loadPools = async () => {
     setLoading(true);
@@ -64,20 +65,7 @@ function AdminPools() {
 
   useEffect(() => {
     api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
-    api.get('/governorates').then((res) => setGovernorates(res.data.governorates)).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!form?.governorate) {
-      setZones([]);
-      return;
-    }
-    setZonesLoading(true);
-    api
-      .get('/delivery-zones', { params: { governorateId: form.governorate._id } })
-      .then((res) => setZones(res.data.zones))
-      .finally(() => setZonesLoading(false));
-  }, [form?.governorate]);
 
   const openEditDialog = (pool) => {
     setDialogError('');
@@ -86,20 +74,19 @@ function AdminPools() {
       productName: pool.productName,
       description: pool.description || '',
       categories: pool.categoryIds || [],
-      governorate: pool.deliveryZone?.governorateId || null,
-      zone: pool.deliveryZone || null,
       unitPrice: String(pool.unitPrice),
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
       expiryDate: pool.expiryDate ? pool.expiryDate.slice(0, 10) : '',
     });
+    presetLocation(pool.deliveryZone?.governorateId || null, pool.deliveryZone || null);
   };
 
   const handleSaveEdit = async () => {
     setDialogError('');
-    const { productName, description, categories: cats, zone, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
+    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
 
-    if (!productName || cats.length === 0 || !zone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
+    if (!productName || cats.length === 0 || !selectedZone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
       return;
     }
@@ -110,7 +97,7 @@ function AdminPools() {
         productName,
         description,
         categoryIds: cats.map((c) => c._id),
-        deliveryZone: zone._id,
+        deliveryZone: selectedZone._id,
         unitPrice: Number(unitPrice),
         minQuantity: Number(minQuantity),
         maxQuantity: Number(maxQuantity),
@@ -145,7 +132,6 @@ function AdminPools() {
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
     { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
     { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
-    { key: 'messages', label: 'رسائل التواصل', onClick: () => navigate('/admin/messages') },
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
@@ -276,19 +262,19 @@ function AdminPools() {
               <Autocomplete
                 options={governorates}
                 getOptionLabel={(o) => o.name}
-                value={form.governorate}
+                value={selectedGovernorate}
                 isOptionEqualToValue={(o, v) => o._id === v._id}
-                onChange={(e, v) => setForm({ ...form, governorate: v, zone: null })}
+                onChange={(e, v) => setSelectedGovernorate(v)}
                 renderInput={(params) => <TextField {...params} label="المحافظة" />}
                 sx={{ mb: 2 }}
               />
               <Autocomplete
                 options={zones}
                 getOptionLabel={(o) => o.name}
-                value={form.zone}
+                value={selectedZone}
                 isOptionEqualToValue={(o, v) => o._id === v._id}
-                onChange={(e, v) => setForm({ ...form, zone: v })}
-                disabled={!form.governorate}
+                onChange={(e, v) => setSelectedZone(v)}
+                disabled={!selectedGovernorate}
                 loading={zonesLoading}
                 renderInput={(params) => <TextField {...params} label="المنطقة" />}
                 sx={{ mb: 2 }}

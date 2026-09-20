@@ -13,6 +13,7 @@ import {
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import api from '../../api/axios.js';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
+import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const MAX_CATEGORIES = 3;
 
@@ -20,40 +21,24 @@ function ShopSetup() {
   const navigate = useNavigate();
 
   const [categories, setCategories] = useState([]);
-  const [governorates, setGovernorates] = useState([]);
-  const [zones, setZones] = useState([]);
-
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedGovernorate, setSelectedGovernorate] = useState(null);
-  const [selectedZone, setSelectedZone] = useState(null);
   const [shopName, setShopName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [zonesLoading, setZonesLoading] = useState(false);
+
+  const {
+    governorates,
+    zones,
+    zonesLoading,
+    selectedGovernorate,
+    selectedZone,
+    setSelectedGovernorate,
+    setSelectedZone,
+  } = useLocationPicker();
 
   useEffect(() => {
-    Promise.all([api.get('/categories'), api.get('/governorates')])
-      .then(([catRes, govRes]) => {
-        setCategories(catRes.data.categories);
-        setGovernorates(govRes.data.governorates);
-      })
-      .catch(() => setError('تعذّر تحميل البيانات، حاولي تحديث الصفحة'));
+    api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!selectedGovernorate) {
-      setZones([]);
-      setSelectedZone(null);
-      return;
-    }
-    setZonesLoading(true);
-    setSelectedZone(null);
-    api
-      .get('/delivery-zones', { params: { governorateId: selectedGovernorate._id } })
-      .then((res) => setZones(res.data.zones))
-      .catch(() => setError('تعذّر تحميل مناطق هالمحافظة'))
-      .finally(() => setZonesLoading(false));
-  }, [selectedGovernorate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

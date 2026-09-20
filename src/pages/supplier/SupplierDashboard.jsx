@@ -21,13 +21,12 @@ import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import PoolCard from '../../components/PoolCard.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const EMPTY_FORM = {
   productName: '',
   description: '',
   categories: [],
-  governorate: null,
-  zone: null,
   unitPrice: '',
   minQuantity: '',
   maxQuantity: '',
@@ -45,12 +44,21 @@ function SupplierDashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPoolId, setEditingPoolId] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [governorates, setGovernorates] = useState([]);
-  const [zones, setZones] = useState([]);
-  const [zonesLoading, setZonesLoading] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState('');
+
+  // governorate/zone selection for the create/edit dialog — no longer duplicated logic
+  const {
+    governorates,
+    zones,
+    zonesLoading,
+    selectedGovernorate,
+    selectedZone,
+    setSelectedGovernorate,
+    setSelectedZone,
+    presetLocation,
+  } = useLocationPicker();
 
   // extend-expiry dialog
   const [extendingPool, setExtendingPool] = useState(null);
@@ -64,9 +72,8 @@ function SupplierDashboard() {
       const supRes = await api.get('/suppliers/me');
       setSupplier(supRes.data.supplier);
 
-      // no supplierId filter anymore — suppliers can now see every open pool on the
-      // platform (market awareness), not just their own. Ownership still gates which
-      // action buttons show up per pool, below.
+      // no supplierId filter — suppliers can see every open pool on the platform,
+      // action buttons below still only appear on their own
       const poolsRes = await api.get('/pools');
       setPools(poolsRes.data.pools);
     } catch {
@@ -79,20 +86,7 @@ function SupplierDashboard() {
   useEffect(() => {
     loadData();
     api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
-    api.get('/governorates').then((res) => setGovernorates(res.data.governorates)).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    if (!form.governorate) {
-      setZones([]);
-      return;
-    }
-    setZonesLoading(true);
-    api
-      .get('/delivery-zones', { params: { governorateId: form.governorate._id } })
-      .then((res) => setZones(res.data.zones))
-      .finally(() => setZonesLoading(false));
-  }, [form.governorate]);
 
   const handleConfirm = async (poolId) => {
     setActingId(poolId);
@@ -138,6 +132,7 @@ function SupplierDashboard() {
   const openCreateDialog = () => {
     setEditingPoolId(null);
     setForm(EMPTY_FORM);
+    setSelectedGovernorate(null); // also clears the zone via the hook's own reset logic
     setDialogError('');
     setDialogOpen(true);
   };
@@ -149,21 +144,20 @@ function SupplierDashboard() {
       productName: pool.productName,
       description: pool.description || '',
       categories: pool.categoryIds || [],
-      governorate: pool.deliveryZone?.governorateId || null,
-      zone: pool.deliveryZone || null,
       unitPrice: String(pool.unitPrice),
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
       expiryDate: pool.expiryDate ? pool.expiryDate.slice(0, 10) : '',
     });
+    presetLocation(pool.deliveryZone?.governorateId || null, pool.deliveryZone || null);
     setDialogOpen(true);
   };
 
   const handleSavePool = async () => {
     setDialogError('');
-    const { productName, description, categories: cats, zone, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
+    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
 
-    if (!productName || cats.length === 0 || !zone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
+    if (!productName || cats.length === 0 || !selectedZone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
       return;
     }
@@ -172,7 +166,7 @@ function SupplierDashboard() {
       productName,
       description,
       categoryIds: cats.map((c) => c._id),
-      deliveryZone: zone._id,
+      deliveryZone: selectedZone._id,
       unitPrice: Number(unitPrice),
       minQuantity: Number(minQuantity),
       maxQuantity: Number(maxQuantity),
@@ -254,7 +248,6 @@ function SupplierDashboard() {
     const busy = actingId === pool._id;
     const isOwnPool = supplier && pool.supplierId?._id === supplier._id;
 
-    // someone else's pool — view-only, no ownership actions at all
     if (!isOwnPool) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -336,7 +329,6 @@ function SupplierDashboard() {
         )}
       </AnimatedPage>
 
-      {/* create / edit dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>{editingPoolId ? 'تعديل السلة' : 'اقتراح سلة جديدة'}</DialogTitle>
         <DialogContent>
@@ -380,19 +372,19 @@ function SupplierDashboard() {
           <Autocomplete
             options={governorates}
             getOptionLabel={(o) => o.name}
-            value={form.governorate}
+            value={selectedGovernorate}
             isOptionEqualToValue={(o, v) => o._id === v._id}
-            onChange={(e, v) => setForm({ ...form, governorate: v, zone: null })}
+            onChange={(e, v) => setSelectedGovernorate(v)}
             renderInput={(params) => <TextField {...params} label="المحافظة" />}
             sx={{ mb: 2 }}
           />
           <Autocomplete
             options={zones}
             getOptionLabel={(o) => o.name}
-            value={form.zone}
+            value={selectedZone}
             isOptionEqualToValue={(o, v) => o._id === v._id}
-            onChange={(e, v) => setForm({ ...form, zone: v })}
-            disabled={!form.governorate}
+            onChange={(e, v) => setSelectedZone(v)}
+            disabled={!selectedGovernorate}
             loading={zonesLoading}
             renderInput={(params) => <TextField {...params} label="المنطقة" />}
             sx={{ mb: 2 }}
@@ -440,7 +432,6 @@ function SupplierDashboard() {
         </DialogActions>
       </Dialog>
 
-      {/* extend expiry dialog */}
       <Dialog open={!!extendingPool} onClose={() => setExtendingPool(null)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>تمديد سلة {extendingPool?.productName}</DialogTitle>
         <DialogContent>

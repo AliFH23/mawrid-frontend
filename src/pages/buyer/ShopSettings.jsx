@@ -4,6 +4,7 @@ import { Box, Typography, Paper, TextField, Button, Alert, Chip, Autocomplete, S
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const MAX_CATEGORIES = 3;
 
@@ -11,65 +12,43 @@ function ShopSettings() {
   const navigate = useNavigate();
   const [shop, setShop] = useState(null);
   const [categories, setCategories] = useState([]);
-  const [governorates, setGovernorates] = useState([]);
-  const [zones, setZones] = useState([]);
-  const [zonesLoading, setZonesLoading] = useState(false);
-
-  const [shopName, setShopName] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedGovernorate, setSelectedGovernorate] = useState(null);
-  const [selectedZone, setSelectedZone] = useState(null);
-  const [initializing, setInitializing] = useState(true);
+  const [shopName, setShopName] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
 
+  const {
+    governorates,
+    zones,
+    zonesLoading,
+    selectedGovernorate,
+    selectedZone,
+    setSelectedGovernorate,
+    setSelectedZone,
+    presetLocation,
+  } = useLocationPicker();
+
   useEffect(() => {
-    Promise.all([api.get('/shops/me'), api.get('/categories'), api.get('/governorates')])
-      .then(([shopRes, catRes, govRes]) => {
+    Promise.all([api.get('/shops/me'), api.get('/categories')])
+      .then(([shopRes, catRes]) => {
         const s = shopRes.data.shop;
         setShop(s);
         setShopName(s.shopName);
         setSelectedCategories(s.categoryIds || []);
         setCategories(catRes.data.categories);
-        setGovernorates(govRes.data.governorates);
 
+        // deliveryZone.governorateId arrives as a full object (nested populate on the
+        // backend), so it slots directly into the hook's presetLocation
         if (s.deliveryZone?.governorateId) {
-          setSelectedGovernorate(s.deliveryZone.governorateId);
-          setSelectedZone(s.deliveryZone);
+          presetLocation(s.deliveryZone.governorateId, s.deliveryZone);
         }
       })
       .catch(() => setToast('تعذّر تحميل بيانات المحل'))
-      .finally(() => {
-        setLoading(false);
-        setInitializing(false);
-      });
+      .finally(() => setLoading(false));
   }, []);
-
-  useEffect(() => {
-    if (initializing) return;
-    if (!selectedGovernorate) {
-      setZones([]);
-      setSelectedZone(null);
-      return;
-    }
-    setZonesLoading(true);
-    setSelectedZone(null);
-    api
-      .get('/delivery-zones', { params: { governorateId: selectedGovernorate._id } })
-      .then((res) => setZones(res.data.zones))
-      .finally(() => setZonesLoading(false));
-  }, [selectedGovernorate]);
-
-  useEffect(() => {
-    if (!initializing && selectedGovernorate && zones.length === 0) {
-      api
-        .get('/delivery-zones', { params: { governorateId: selectedGovernorate._id } })
-        .then((res) => setZones(res.data.zones));
-    }
-  }, [initializing]);
 
   const handleSave = async (e) => {
     e.preventDefault();
