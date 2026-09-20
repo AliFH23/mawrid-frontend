@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, TextField, Button, Alert, Chip, Autocomplete, Snackbar, CircularProgress } from '@mui/material';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 const MAX_CATEGORIES = 3;
 

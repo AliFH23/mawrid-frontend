@@ -1,5 +1,6 @@
 import { Card, Box, Typography, Chip, LinearProgress } from '@mui/material';
 import { motion } from 'framer-motion';
+import UpdateIcon from '@mui/icons-material/Update';
 
 const STATUS_STYLES = {
   OPEN: { label: 'مفتوحة', bg: '#E7F8F0', color: '#047857' },
@@ -29,11 +30,21 @@ function PoolCard({ pool, action }) {
               {categoryLabel} {pool.deliveryZone?.name ? `· ${pool.deliveryZone.name}` : ''}
             </Typography>
           </Box>
-          <Chip
-            label={status.label}
-            size="small"
-            sx={{ bgcolor: status.bg, color: status.color, fontWeight: 700, fontSize: 11 }}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'flex-end' }}>
+            <Chip
+              label={status.label}
+              size="small"
+              sx={{ bgcolor: status.bg, color: status.color, fontWeight: 700, fontSize: 11 }}
+            />
+            {pool.extended && (
+              <Chip
+                icon={<UpdateIcon sx={{ fontSize: 13 }} />}
+                label="تم التمديد"
+                size="small"
+                sx={{ bgcolor: '#FEF3E2', color: '#B45309', fontWeight: 700, fontSize: 10, height: 20 }}
+              />
+            )}
+          </Box>
         </Box>
 
         <LinearProgress

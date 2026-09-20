@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Chip, CircularProgress, Alert, LinearProgress } from '@mui/material';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 const ORDER_STATUS = {
   CONFIRMED: { label: 'مؤكّد', bg: '#E7F8F0', color: '#047857' },

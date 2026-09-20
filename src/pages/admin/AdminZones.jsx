@@ -17,13 +17,12 @@ import {
   List,
   ListItemButton,
   ListItemText,
-  Divider,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 function AdminZones() {
   const navigate = useNavigate();
@@ -130,12 +129,13 @@ function AdminZones() {
 
   const navItems = [
     { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
-    { key: 'pools', label: 'السلات', onClick: () => navigate('/admin') },
-    { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin') },
+    { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
+    { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
+    { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
+    { key: 'messages', label: 'رسائل التواصل', onClick: () => navigate('/admin/messages') },
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
-    { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
   ];
 
   const headerCard = (

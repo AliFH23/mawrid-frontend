@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { Box, Container, Typography, Button, Grid } from '@mui/material';
 import { motion } from 'framer-motion';
-import Navbar from '../components/Navbar.jsx';
-import Footer from '../components/Footer.jsx';
-import PoolingDemo from '../components/PoolingDemo.jsx';
-import PoolCard from '../components/PoolCard.jsx';
+import Navbar from '../../components/Navbar.jsx';
+import Footer from '../../components/Footer.jsx';
+import PoolingDemo from '../../components/PoolingDemo.jsx';
+import PoolCard from '../../components/PoolCard.jsx';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -18,7 +18,7 @@ const fadeUp = {
 const SAMPLE_POOL = {
   _id: 'sample',
   productName: 'أرز بسمتي — كيس 5 كغ',
-  categoryId: { name: 'بقالة' },
+  categoryIds: [{ name: 'بقالة' }],
   deliveryZone: { name: 'إربد - الحي الشرقي' },
   status: 'OPEN',
   currentQuantity: 34,
@@ -41,7 +41,14 @@ function Landing() {
               <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={0}>
                 <Typography
                   component="h1"
-                  sx={{ fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: { xs: 34, md: 46 }, color: '#fff', lineHeight: 1.35, mb: 2.5 }}
+                  sx={{
+                    fontFamily: "'Cairo', sans-serif",
+                    fontWeight: 800,
+                    fontSize: { xs: 34, md: 46 },
+                    color: '#fff',
+                    lineHeight: 1.35,
+                    mb: 2.5,
+                  }}
                 >
                   محلك الصغير يشتري بسعر الجملة، من اليوم الأول
                 </Typography>
@@ -80,7 +87,7 @@ function Landing() {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 11 } }}>
+      <Container id="why-mawrid" maxWidth="lg" sx={{ py: { xs: 8, md: 11 } }}>
         <Grid container spacing={5} alignItems="center">
           <Grid item xs={12} md={5}>
             <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>
@@ -129,7 +136,7 @@ function Landing() {
         </Grid>
       </Container>
 
-      <Box sx={{ bgcolor: '#F1F5F9', py: { xs: 8, md: 11 } }}>
+      <Box id="how-it-works" sx={{ bgcolor: '#F1F5F9', py: { xs: 8, md: 11 } }}>
         <Container maxWidth="lg">
           <Typography component="h2" sx={{ fontFamily: "'Cairo', sans-serif", fontWeight: 800, fontSize: { xs: 26, md: 32 }, mb: 6, textAlign: 'center' }}>
             من التسجيل لاستلام بضاعتك — أربع خطوات
@@ -187,7 +194,7 @@ function Landing() {
         </Container>
       </Box>
 
-      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 11 } }}>
+      <Container id="live-preview" maxWidth="lg" sx={{ py: { xs: 8, md: 11 } }}>
         <Grid container spacing={6} alignItems="center">
           <Grid item xs={12} md={6}>
             <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}>

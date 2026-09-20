@@ -27,9 +27,9 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import api from '../api/axios.js';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import { isPasswordStrong, PASSWORD_HINT } from '../utils/passwordValidation.js';
+import api from '../../api/axios.js';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import { isPasswordStrong, PASSWORD_HINT } from '../../utils/passwordValidation.js';
 
 const MAX_CATEGORIES = 3;
 const STEPS = ['بيانات الحساب', 'بيانات النشاط'];
@@ -55,6 +55,7 @@ function Register() {
   const [zonesLoading, setZonesLoading] = useState(false);
 
   const [companyName, setCompanyName] = useState('');
+  const [companyDescription, setCompanyDescription] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -129,7 +130,7 @@ function Register() {
         }
       } else {
         try {
-          await api.post('/suppliers', { companyName });
+          await api.post('/suppliers', { companyName, companyDescription });
           navigate('/supplier');
         } catch {
           navigate('/supplier/setup');
@@ -378,6 +379,19 @@ function Register() {
                     placeholder="مثال: Ahmad Trading Co."
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
+                    sx={{ mb: 2.5 }}
+                  />
+
+                  <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+                    وصف الشركة (اختياري)
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    placeholder="مثلاً: موزّع مواد غذائية جملة، متخصصين بزيوت ومعلّبات"
+                    value={companyDescription}
+                    onChange={(e) => setCompanyDescription(e.target.value)}
                     sx={{ mb: 3 }}
                   />
                 </>

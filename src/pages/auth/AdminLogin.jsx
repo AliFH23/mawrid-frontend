@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Paper, Typography, TextField, Button, Alert, InputAdornment } from '@mui/material';
+import { Box, Paper, Typography, TextField, Button, Alert, InputAdornment, IconButton } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import api from '../api/axios.js';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import api from '../../api/axios.js';
 
-// intentionally NOT linked from any public page (navbar, footer, the main /login screen).
-// only reachable if someone types /admin/login directly
 function AdminLogin() {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +57,7 @@ function AdminLogin() {
       }}
     >
       <Paper sx={{ width: 420, p: 5, borderRadius: 5, bgcolor: '#111A30' }} elevation={0}>
-               <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
           <Box
             component="img"
             src="/logo/mawrid-mark-white.png"
@@ -96,7 +97,7 @@ function AdminLogin() {
           />
           <TextField
             fullWidth
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -110,6 +111,17 @@ function AdminLogin() {
               startAdornment: (
                 <InputAdornment position="start">
                   <LockOutlinedIcon fontSize="small" sx={{ color: '#8B95AB' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" size="small">
+                    {showPassword ? (
+                      <VisibilityOff fontSize="small" sx={{ color: '#8B95AB' }} />
+                    ) : (
+                      <Visibility fontSize="small" sx={{ color: '#8B95AB' }} />
+                    )}
+                  </IconButton>
                 </InputAdornment>
               ),
             }}

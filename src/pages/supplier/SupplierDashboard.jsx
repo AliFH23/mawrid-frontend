@@ -17,13 +17,14 @@ import {
   LinearProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import PoolCard from '../components/PoolCard.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import PoolCard from '../../components/PoolCard.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 const EMPTY_FORM = {
   productName: '',
+  description: '',
   categories: [],
   governorate: null,
   zone: null,
@@ -42,7 +43,7 @@ function SupplierDashboard() {
   const [toast, setToast] = useState('');
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingPoolId, setEditingPoolId] = useState(null); // null = creating, otherwise editing this pool's id
+  const [editingPoolId, setEditingPoolId] = useState(null);
   const [categories, setCategories] = useState([]);
   const [governorates, setGovernorates] = useState([]);
   const [zones, setZones] = useState([]);
@@ -51,13 +52,22 @@ function SupplierDashboard() {
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState('');
 
+  // extend-expiry dialog
+  const [extendingPool, setExtendingPool] = useState(null);
+  const [newExpiryDate, setNewExpiryDate] = useState('');
+  const [extendError, setExtendError] = useState('');
+  const [extending, setExtending] = useState(false);
+
   const loadData = async () => {
     setLoading(true);
     try {
       const supRes = await api.get('/suppliers/me');
       setSupplier(supRes.data.supplier);
 
-      const poolsRes = await api.get('/pools', { params: { supplierId: supRes.data.supplier._id } });
+      // no supplierId filter anymore — suppliers can now see every open pool on the
+      // platform (market awareness), not just their own. Ownership still gates which
+      // action buttons show up per pool, below.
+      const poolsRes = await api.get('/pools');
       setPools(poolsRes.data.pools);
     } catch {
       setToast('تعذّر تحميل البيانات');
@@ -137,6 +147,7 @@ function SupplierDashboard() {
     setDialogError('');
     setForm({
       productName: pool.productName,
+      description: pool.description || '',
       categories: pool.categoryIds || [],
       governorate: pool.deliveryZone?.governorateId || null,
       zone: pool.deliveryZone || null,
@@ -150,7 +161,7 @@ function SupplierDashboard() {
 
   const handleSavePool = async () => {
     setDialogError('');
-    const { productName, categories: cats, zone, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
+    const { productName, description, categories: cats, zone, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
 
     if (!productName || cats.length === 0 || !zone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
@@ -159,6 +170,7 @@ function SupplierDashboard() {
 
     const payload = {
       productName,
+      description,
       categoryIds: cats.map((c) => c._id),
       deliveryZone: zone._id,
       unitPrice: Number(unitPrice),
@@ -187,8 +199,33 @@ function SupplierDashboard() {
     }
   };
 
+  const openExtendDialog = (pool) => {
+    setExtendError('');
+    setNewExpiryDate(pool.expiryDate ? pool.expiryDate.slice(0, 10) : '');
+    setExtendingPool(pool);
+  };
+
+  const handleExtend = async () => {
+    setExtendError('');
+    if (!newExpiryDate) {
+      setExtendError('الرجاء تحديد تاريخ انتهاء جديد');
+      return;
+    }
+    setExtending(true);
+    try {
+      await api.put(`/pools/${extendingPool._id}/extend`, { newExpiryDate });
+      setToast('تم تمديد السلة بنجاح ✓');
+      setExtendingPool(null);
+      loadData();
+    } catch (err) {
+      setExtendError(err.response?.data?.message || 'تعذّر تمديد السلة');
+    } finally {
+      setExtending(false);
+    }
+  };
+
   const navItems = [
-    { key: 'pools', label: 'سلاتي', onClick: () => navigate('/supplier') },
+    { key: 'pools', label: 'السلات', onClick: () => navigate('/supplier') },
     { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
     { key: 'profile', label: 'ملف الشركة', onClick: () => navigate('/supplier/profile') },
   ];
@@ -215,6 +252,22 @@ function SupplierDashboard() {
 
   const renderAction = (pool) => {
     const busy = actingId === pool._id;
+    const isOwnPool = supplier && pool.supplierId?._id === supplier._id;
+
+    // someone else's pool — view-only, no ownership actions at all
+    if (!isOwnPool) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Button size="small" variant="text" onClick={() => navigate(`/pools/${pool._id}`)}>
+            التفاصيل
+          </Button>
+          {pool.supplierId?.companyName && (
+            <Chip label={pool.supplierId.companyName} size="small" sx={{ bgcolor: '#F1F5F9', color: '#64748B', fontSize: 11 }} />
+          )}
+        </Box>
+      );
+    }
+
     return (
       <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
         <Button size="small" variant="text" onClick={() => navigate(`/pools/${pool._id}`)}>
@@ -237,6 +290,9 @@ function SupplierDashboard() {
             <Button size="small" variant="outlined" color="primary" disabled={busy} onClick={() => openEditDialog(pool)}>
               تعديل
             </Button>
+            <Button size="small" variant="outlined" color="warning" disabled={busy} onClick={() => openExtendDialog(pool)}>
+              تمديد
+            </Button>
             <Button size="small" variant="text" color="error" disabled={busy} onClick={() => handleCancel(pool._id)}>
               إلغاء السلة
             </Button>
@@ -252,10 +308,10 @@ function SupplierDashboard() {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box>
             <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>
-              سلاتي
+              السلات
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              كل السلات يلي فتحتيها، بحالاتها المختلفة
+              كل سلات المنصة — سلاتك عليها كل الصلاحيات، وسلات باقي الموردين للعرض بس
             </Typography>
           </Box>
           <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={openCreateDialog}>
@@ -269,7 +325,7 @@ function SupplierDashboard() {
           </Box>
         ) : pools.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>
-            ما فتحتِ أي سلة لهلق — اضغطي "اقتراح سلة جديدة" لتبدئي
+            ما في سلات بالمنصة لهلق — اضغطي "اقتراح سلة جديدة" لتبدئي
           </Alert>
         ) : (
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2.5 }}>
@@ -280,6 +336,7 @@ function SupplierDashboard() {
         )}
       </AnimatedPage>
 
+      {/* create / edit dialog */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>{editingPoolId ? 'تعديل السلة' : 'اقتراح سلة جديدة'}</DialogTitle>
         <DialogContent>
@@ -294,6 +351,16 @@ function SupplierDashboard() {
             value={form.productName}
             onChange={(e) => setForm({ ...form, productName: e.target.value })}
             sx={{ mb: 2, mt: 1 }}
+          />
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="وصف المنتج (اختياري)"
+            placeholder="مثلاً: زيت زيتون بكر ممتاز، عبوة زجاج 5 لتر، إنتاج محلي"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            sx={{ mb: 2 }}
           />
           <Autocomplete
             multiple
@@ -369,6 +436,38 @@ function SupplierDashboard() {
           </Button>
           <Button variant="contained" color="primary" disabled={saving} onClick={handleSavePool}>
             {saving ? 'جاري الحفظ...' : editingPoolId ? 'حفظ التعديلات' : 'فتح السلة'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* extend expiry dialog */}
+      <Dialog open={!!extendingPool} onClose={() => setExtendingPool(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>تمديد سلة {extendingPool?.productName}</DialogTitle>
+        <DialogContent>
+          {extendError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {extendError}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            التاريخ الحالي: {extendingPool ? new Date(extendingPool.expiryDate).toLocaleDateString('ar-EG') : ''}
+          </Typography>
+          <TextField
+            fullWidth
+            type="date"
+            label="تاريخ الانتهاء الجديد"
+            InputLabelProps={{ shrink: true }}
+            value={newExpiryDate}
+            onChange={(e) => setNewExpiryDate(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setExtendingPool(null)} color="secondary">
+            إلغاء
+          </Button>
+          <Button variant="contained" color="warning" disabled={extending} onClick={handleExtend}>
+            {extending ? 'جاري التمديد...' : 'تمديد السلة'}
           </Button>
         </DialogActions>
       </Dialog>

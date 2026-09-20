@@ -16,9 +16,9 @@ import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import api from '../api/axios.js';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import { isPasswordStrong, PASSWORD_HINT } from '../utils/passwordValidation.js';
+import api from '../../api/axios.js';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import { isPasswordStrong, PASSWORD_HINT } from '../../utils/passwordValidation.js';
 
 function ForgotPassword() {
   const navigate = useNavigate();
@@ -26,6 +26,7 @@ function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -36,12 +37,16 @@ function ForgotPassword() {
     setError('');
     setSuccess('');
 
-    if (!email || !phone || !newPassword) {
+    if (!email || !phone || !newPassword || !confirmPassword) {
       setError('الرجاء تعبئة كل الحقول');
       return;
     }
     if (!isPasswordStrong(newPassword)) {
       setError(PASSWORD_HINT);
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('كلمة المرور وتأكيدها غير متطابقين');
       return;
     }
 
@@ -140,7 +145,7 @@ function ForgotPassword() {
             placeholder="8 أحرف، حرف كبير وصغير ورقم"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            sx={{ mb: 1 }}
+            sx={{ mb: 2.5 }}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -152,6 +157,25 @@ function ForgotPassword() {
                   <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" size="small">
                     {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                   </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+            تأكيد كلمة المرور
+          </Typography>
+          <TextField
+            fullWidth
+            type={showPassword ? 'text' : 'password'}
+            placeholder="أعيدي كتابة كلمة المرور"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            sx={{ mb: 1 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
                 </InputAdornment>
               ),
             }}

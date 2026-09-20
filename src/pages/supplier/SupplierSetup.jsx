@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Paper, Typography, TextField, Button, Alert } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
-import api from '../api/axios.js';
-import AnimatedPage from '../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
 
 function SupplierSetup() {
   const navigate = useNavigate();
 
   const [companyName, setCompanyName] = useState('');
+  const [companyDescription, setCompanyDescription] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,7 +24,7 @@ function SupplierSetup() {
 
     setLoading(true);
     try {
-      await api.post('/suppliers', { companyName });
+      await api.post('/suppliers', { companyName, companyDescription });
       navigate('/supplier');
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء حفظ بيانات الشركة');
@@ -84,6 +85,19 @@ function SupplierSetup() {
             placeholder="مثال: Ahmad Trading Co."
             value={companyName}
             onChange={(e) => setCompanyName(e.target.value)}
+            sx={{ mb: 2.5 }}
+          />
+
+          <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+            وصف الشركة (اختياري)
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            placeholder="مثلاً: موزّع مواد غذائية جملة، متخصصين بزيوت ومعلّبات"
+            value={companyDescription}
+            onChange={(e) => setCompanyDescription(e.target.value)}
             sx={{ mb: 3 }}
           />
 

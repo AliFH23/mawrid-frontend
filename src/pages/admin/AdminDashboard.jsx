@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Grid, Paper, Chip, CircularProgress, Alert } from '@mui/material';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 const STATUS_STYLES = {
   OPEN: { label: 'سلة مفتوحة', bg: '#E7F8F0', color: '#047857' },
@@ -12,8 +12,6 @@ const STATUS_STYLES = {
   EXPIRED: { label: 'منتهية', bg: '#F1F5F9', color: '#64748B' },
   CANCELLED: { label: 'ملغاة', bg: '#FDECEC', color: '#DC2626' },
 };
-
-
 
 function StatCard({ label, value, sub }) {
   return (
@@ -61,10 +59,11 @@ function AdminDashboard() {
     { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
     { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
+    { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
+    { key: 'messages', label: 'رسائل التواصل', onClick: () => navigate('/admin/messages') },
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
-    { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
   ];
 
   const headerCard = (
@@ -139,13 +138,14 @@ function AdminDashboard() {
                 <tbody>
                   {pools.slice(0, 10).map((pool) => {
                     const status = STATUS_STYLES[pool.status] || STATUS_STYLES.OPEN;
+                    const categoryLabel = (pool.categoryIds || []).map((c) => c.name).join('، ');
                     return (
                       <tr key={pool._id}>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontWeight: 700, fontSize: 14 }}>
                           {pool.productName}
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>
-                          {pool.categoryId?.name}
+                          {categoryLabel}
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>
                           {pool.deliveryZone?.name}

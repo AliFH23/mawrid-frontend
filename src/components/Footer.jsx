@@ -1,5 +1,7 @@
 import { Box, Typography, Container } from '@mui/material';
 
+const CONTACT_EMAIL = 'contact@mawrid.com';
+
 function Footer() {
   return (
     <Box component="footer" sx={{ bgcolor: '#0B1220', pt: 7, pb: 4 }}>
@@ -21,14 +23,19 @@ function Footer() {
           </Box>
 
           <Box sx={{ display: 'flex', gap: 4 }}>
-            {['من نحن', 'تواصل معنا', 'سياسة الخصوصية'].map((label) => (
-              <Typography
-                key={label}
-                sx={{ color: '#8B95AB', fontSize: 14, cursor: 'pointer', '&:hover': { color: '#fff' } }}
-              >
-                {label}
-              </Typography>
-            ))}
+            <Typography sx={{ color: '#8B95AB', fontSize: 14, cursor: 'pointer', '&:hover': { color: '#fff' } }}>
+              من نحن
+            </Typography>
+            <Typography
+              component="a"
+              href={`mailto:${CONTACT_EMAIL}`}
+              sx={{ color: '#8B95AB', fontSize: 14, cursor: 'pointer', textDecoration: 'none', '&:hover': { color: '#fff' } }}
+            >
+              تواصل معنا
+            </Typography>
+            <Typography sx={{ color: '#8B95AB', fontSize: 14, cursor: 'pointer', '&:hover': { color: '#fff' } }}>
+              سياسة الخصوصية
+            </Typography>
           </Box>
         </Box>
 

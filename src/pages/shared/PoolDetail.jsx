@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Chip, CircularProgress, Alert, Button, LinearProgress } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 const STATUS_STYLES = {
   OPEN: { label: 'مفتوحة', bg: '#E7F8F0', color: '#047857' },
@@ -20,8 +20,7 @@ const FEE_STATUS = {
   FORFEITED: { label: 'محتجز', bg: '#FDECEC', color: '#DC2626' },
 };
 
-// used by both the supplier (their own pools) and the admin (any pool) — the backend's
-// getPoolParticipants endpoint already checks ownership for suppliers, admin sees everything
+// used by both the supplier (their own pools) and the admin (any pool)
 function PoolDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -59,6 +58,7 @@ function PoolDetail() {
         { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
         { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
         { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
+        { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
         { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
         { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
         { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
@@ -77,7 +77,7 @@ function PoolDetail() {
 
   if (loading) {
     return (
-      <DashboardLayout navItems={navItems} activeKey={isAdmin ? 'pools' : 'pools'} headerCard={headerCard}>
+      <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
           <CircularProgress color="primary" />
         </Box>
@@ -116,6 +116,11 @@ function PoolDetail() {
                 {categoryLabel} · {pool.deliveryZone?.name}
                 {isAdmin && pool.supplierId?.companyName ? ` · ${pool.supplierId.companyName}` : ''}
               </Typography>
+              {pool.description && (
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, maxWidth: 480 }}>
+                  {pool.description}
+                </Typography>
+              )}
             </Box>
             <Chip label={status.label} sx={{ bgcolor: status.bg, color: status.color, fontWeight: 700 }} />
           </Box>

@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Chip, CircularProgress, Button, Snackbar, Alert } from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PaymentIcon from '@mui/icons-material/Payment';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import PaymentMethodDialog from '../components/Paymentmethoddialog.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import PaymentMethodDialog from '../../components/PaymentMethodDialog.jsx';
+import api from '../../api/axios.js';
 
 const POOL_STATUS = {
   OPEN: { label: 'مفتوحة', bg: '#E7F8F0', color: '#047857' },
@@ -34,6 +34,8 @@ const METHOD_LABEL = {
   ORANGE_MONEY: 'Orange Money',
   CLIQ: 'كليك CliQ',
 };
+
+const BUYER_COMMISSION_RATE = 0.01;
 
 function BuyerHistory() {
   const navigate = useNavigate();
@@ -109,7 +111,9 @@ function BuyerHistory() {
   );
 
   const remainingBalance = payingParticipation
-    ? payingParticipation.quantity * payingParticipation.poolId.unitPrice - payingParticipation.commitmentFeeAmount
+    ? payingParticipation.quantity * payingParticipation.poolId.unitPrice -
+      payingParticipation.commitmentFeeAmount +
+      Math.round(payingParticipation.quantity * payingParticipation.poolId.unitPrice * BUYER_COMMISSION_RATE * 100) / 100
     : 0;
 
   return (
@@ -139,9 +143,9 @@ function BuyerHistory() {
               const feeStatus = FEE_STATUS[p.commitmentFeeStatus] || FEE_STATUS.PAID;
               const deliveryStatus = DELIVERY_STATUS[p.deliveryStatus] || DELIVERY_STATUS.PENDING_DELIVERY;
               const isCash = p.paymentMethod === 'CASH';
-              const balance = p.quantity * pool.unitPrice - p.commitmentFeeAmount;
+              const buyerCommission = Math.round(p.quantity * pool.unitPrice * BUYER_COMMISSION_RATE * 100) / 100;
+              const balance = p.quantity * pool.unitPrice - p.commitmentFeeAmount + buyerCommission;
 
-              // cash participants skip the online final-payment step entirely
               const needsOnlinePayment = !isCash && pool.status === 'COMPLETED' && p.finalPaymentStatus === 'PENDING';
               const canConfirmReceipt =
                 pool.status === 'COMPLETED' &&
@@ -157,8 +161,8 @@ function BuyerHistory() {
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         الكمية: {p.quantity} · السعر الإجمالي: {(p.quantity * pool.unitPrice).toFixed(1)} د.أ · طريقة الدفع: {METHOD_LABEL[p.paymentMethod] || 'بطاقة'}
-                        {pool.status === 'COMPLETED' && !isCash && ` · المتبقي: ${balance.toFixed(1)} د.أ`}
-                        {pool.status === 'COMPLETED' && isCash && ` · يُدفع نقدًا عند الاستلام: ${balance.toFixed(1)} د.أ`}
+                        {pool.status === 'COMPLETED' && !isCash && ` · المتبقي (شامل عمولة منصة 1%): ${balance.toFixed(1)} د.أ`}
+                        {pool.status === 'COMPLETED' && isCash && ` · يُدفع نقدًا عند الاستلام (شامل عمولة منصة 1%): ${balance.toFixed(1)} د.أ`}
                       </Typography>
                     </Box>
 

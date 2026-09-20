@@ -11,8 +11,8 @@ import {
   Autocomplete,
 } from '@mui/material';
 import StorefrontIcon from '@mui/icons-material/Storefront';
-import api from '../api/axios.js';
-import AnimatedPage from '../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
 
 const MAX_CATEGORIES = 3;
 
@@ -40,7 +40,6 @@ function ShopSetup() {
       .catch(() => setError('تعذّر تحميل البيانات، حاولي تحديث الصفحة'));
   }, []);
 
-  // whenever the governorate changes, fetch only the zones that belong to it
   useEffect(() => {
     if (!selectedGovernorate) {
       setZones([]);

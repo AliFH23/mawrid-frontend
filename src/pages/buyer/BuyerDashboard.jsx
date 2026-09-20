@@ -16,11 +16,11 @@ import {
   TextField,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import PoolCard from '../components/PoolCard.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import PaymentMethodDialog from '../components/Paymentmethoddialog.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import PoolCard from '../../components/PoolCard.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import PaymentMethodDialog from '../../components/PaymentMethodDialog.jsx';
+import api from '../../api/axios.js';
 
 const COMMITMENT_FEE_RATE = 0.05;
 
@@ -169,6 +169,11 @@ function BuyerDashboard() {
       <Dialog open={!!quantityDialogPool} onClose={() => setQuantityDialogPool(null)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>الانضمام لسلة {quantityDialogPool?.productName}</DialogTitle>
         <DialogContent>
+          {quantityDialogPool?.description && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              {quantityDialogPool.description}
+            </Alert>
+          )}
           {quantityError && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               {quantityError}

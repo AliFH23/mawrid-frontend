@@ -4,7 +4,11 @@ import { Box, Button, Container, IconButton, Drawer, List, ListItemButton, ListI
 import MenuIcon from '@mui/icons-material/Menu';
 import { motion } from 'framer-motion';
 
-const NAV_LINKS = ['كيف تعمل المنصة', 'للموردين', 'للمشاريع الصغيرة'];
+const NAV_LINKS = [
+  { label: 'كيف تعمل المنصة', sectionId: 'how-it-works' },
+  { label: 'للموردين', sectionId: 'why-mawrid' },
+  { label: 'للمشاريع الصغيرة', sectionId: 'live-preview' },
+];
 
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -16,6 +20,16 @@ function Navbar() {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  const scrollToSection = (sectionId) => {
+    setMobileOpen(false);
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      navigate(`/#${sectionId}`);
+    }
+  };
 
   return (
     <Box
@@ -44,9 +58,10 @@ function Navbar() {
           </Box>
 
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 4 }}>
-            {NAV_LINKS.map((label) => (
+            {NAV_LINKS.map(({ label, sectionId }) => (
               <Box
                 key={label}
+                onClick={() => scrollToSection(sectionId)}
                 sx={{ color: '#B8C0D4', fontSize: 14, fontWeight: 600, cursor: 'pointer', '&:hover': { color: '#fff' } }}
               >
                 {label}
@@ -75,8 +90,8 @@ function Navbar() {
       <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}>
         <Box sx={{ width: 260, bgcolor: '#0B1220', height: '100%', p: 2.5 }}>
           <List>
-            {NAV_LINKS.map((label) => (
-              <ListItemButton key={label} onClick={() => setMobileOpen(false)}>
+            {NAV_LINKS.map(({ label, sectionId }) => (
+              <ListItemButton key={label} onClick={() => scrollToSection(sectionId)}>
                 <ListItemText primary={label} primaryTypographyProps={{ color: '#B8C0D4', fontWeight: 600 }} />
               </ListItemButton>
             ))}

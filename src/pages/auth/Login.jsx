@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate , Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -10,14 +10,19 @@ import {
   ToggleButtonGroup,
   ToggleButton,
   InputAdornment,
+  IconButton,
   Link,
 } from '@mui/material';
 import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import LoginIcon from '@mui/icons-material/Login';
-import api from '../api/axios.js';
-import { postAuthRedirect } from '../utils/postAuthRedirect.js';
-import AnimatedPage from '../components/AnimatedPage.jsx';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import api from '../../api/axios.js';
+import { postAuthRedirect } from '../../utils/postAuthRedirect.js';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+
+const ROLE_LABEL_AR = { buyer: 'مشروع صغير', supplier: 'مورد' };
 
 function Login() {
   const navigate = useNavigate();
@@ -25,6 +30,7 @@ function Login() {
   const [role, setRole] = useState('buyer');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -41,6 +47,15 @@ function Login() {
     try {
       const res = await api.post('/auth/login', { email, password });
       const { user, token } = res.data;
+
+      // the role toggle is a real check now — logging in with the wrong tab selected
+      // stops here with a clear message instead of silently going to whichever
+      // dashboard the account's real role happens to be
+      if (user.role !== role && (user.role === 'buyer' || user.role === 'supplier')) {
+        setError(`هذا الحساب مسجّل كـ "${ROLE_LABEL_AR[user.role]}" — الرجاء اختيار الدور الصحيح من الأعلى`);
+        setLoading(false);
+        return;
+      }
 
       localStorage.setItem('mawrid_token', token);
       localStorage.setItem('mawrid_user', JSON.stringify(user));
@@ -64,7 +79,8 @@ function Login() {
         p: 2,
       }}
     >
-      <Paper component={AnimatedPage} sx={{ width: 460, p: 5, borderRadius: 5 }} elevation={0}>        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+      <Paper component={AnimatedPage} sx={{ width: 460, p: 5, borderRadius: 5 }} elevation={0}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
           <Box
             component="img"
             src="/logo/mawrid-mark-ink.png"
@@ -108,7 +124,6 @@ function Login() {
         >
           <ToggleButton value="buyer">مشروع صغير</ToggleButton>
           <ToggleButton value="supplier">مورد</ToggleButton>
-          
         </ToggleButtonGroup>
 
         {error && (
@@ -147,7 +162,7 @@ function Login() {
           </Box>
           <TextField
             fullWidth
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -156,6 +171,13 @@ function Login() {
               startAdornment: (
                 <InputAdornment position="start">
                   <LockOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" size="small">
+                    {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                  </IconButton>
                 </InputAdornment>
               ),
             }}
@@ -178,6 +200,13 @@ function Login() {
           ما عندك حساب؟{' '}
           <Link component={RouterLink} to="/register" underline="hover" sx={{ fontWeight: 700, color: 'primary.dark' }}>
             أنشئ حساب جديد
+          </Link>
+        </Typography>
+
+        {/* discreet, reachable admin entry point — no need to type the URL manually */}
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
+          <Link component={RouterLink} to="/admin/login" underline="hover" sx={{ color: '#B0B8C4' }}>
+            دخول كمدير المنصة
           </Link>
         </Typography>
       </Paper>

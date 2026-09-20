@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Typography, Paper, Chip, CircularProgress, Alert, TextField, MenuItem } from '@mui/material';
-import DashboardLayout from '../layouts/DashboardLayout.jsx';
-import AnimatedPage from '../components/AnimatedPage.jsx';
-import api from '../api/axios.js';
+import DashboardLayout from '../../layouts/DashboardLayout.jsx';
+import AnimatedPage from '../../components/AnimatedPage.jsx';
+import api from '../../api/axios.js';
 
 const TYPE_STYLES = {
   COMMITMENT_FEE_PAID: { label: 'دفع رسم التزام', bg: '#EFF6FF', color: '#1D4ED8' },
@@ -25,8 +25,9 @@ function AdminTransactions() {
     try {
       const res = await api.get('/transactions', { params: typeFilter ? { type: typeFilter } : {} });
       setTransactions(res.data.transactions);
-    } catch {
-      // stays empty, table shows the "no transactions" state
+    } catch (err) {
+      // logged instead of silently swallowed — makes future debugging much faster
+      console.error('Failed to load transactions:', err);
     } finally {
       setLoading(false);
     }
@@ -41,6 +42,7 @@ function AdminTransactions() {
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
     { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
     { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
+    { key: 'messages', label: 'رسائل التواصل', onClick: () => navigate('/admin/messages') },
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
