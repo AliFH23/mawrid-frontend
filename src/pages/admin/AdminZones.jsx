@@ -135,6 +135,8 @@ function AdminZones() {
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
+    { key: 'fines', label: 'الغرامات', onClick: () => navigate('/admin/fines') },
+    { key: 'settings', label: 'الإعدادات المالية', onClick: () => navigate('/admin/settings') },
   ];
 
   const headerCard = (

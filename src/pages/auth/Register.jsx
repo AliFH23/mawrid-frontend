@@ -67,7 +67,9 @@ function Register() {
     api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
   }, []);
 
-  const handleNext = () => {
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  const handleNext = async () => {
     setError('');
     if (!name || !email || !phone || !password) {
       setError('الرجاء تعبئة كل الحقول');
@@ -77,7 +79,21 @@ function Register() {
       setError(PASSWORD_HINT);
       return;
     }
-    setActiveStep(1);
+
+    setCheckingEmail(true);
+    try {
+      const res = await api.get('/auth/check-email', { params: { email } });
+      if (!res.data.available) {
+        setError('هذا البريد الإلكتروني مستخدم من قبل — جرّبي بريدًا آخر أو سجّلي دخولك');
+        setCheckingEmail(false);
+        return;
+      }
+      setActiveStep(1);
+    } catch {
+      setError('تعذّر التحقق من البريد الإلكتروني، حاولي مرة أخرى');
+    } finally {
+      setCheckingEmail(false);
+    }
   };
 
   const handleBack = () => {
@@ -286,8 +302,8 @@ function Register() {
               {PASSWORD_HINT}
             </Typography>
 
-            <Button fullWidth variant="contained" color="primary" size="large" onClick={handleNext} endIcon={<ArrowForwardIcon />}>
-              التالي
+            <Button fullWidth variant="contained" color="primary" size="large" onClick={handleNext} disabled={checkingEmail} endIcon={<ArrowForwardIcon />}>
+              {checkingEmail ? 'جاري التحقق...' : 'التالي'}
             </Button>
           </AnimatedPage>
         )}

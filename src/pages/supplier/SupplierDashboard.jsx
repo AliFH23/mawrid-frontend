@@ -48,7 +48,6 @@ function SupplierDashboard() {
   const [saving, setSaving] = useState(false);
   const [dialogError, setDialogError] = useState('');
 
-  // governorate/zone selection for the create/edit dialog — no longer duplicated logic
   const {
     governorates,
     zones,
@@ -60,11 +59,16 @@ function SupplierDashboard() {
     presetLocation,
   } = useLocationPicker();
 
-  // extend-expiry dialog
   const [extendingPool, setExtendingPool] = useState(null);
   const [newExpiryDate, setNewExpiryDate] = useState('');
   const [extendError, setExtendError] = useState('');
   const [extending, setExtending] = useState(false);
+
+  // reject dialog — collects a mandatory reason (backend requires it, and it becomes
+  // the formal Fine record's reason too)
+  const [rejectingPoolId, setRejectingPoolId] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -72,8 +76,6 @@ function SupplierDashboard() {
       const supRes = await api.get('/suppliers/me');
       setSupplier(supRes.data.supplier);
 
-      // no supplierId filter — suppliers can see every open pool on the platform,
-      // action buttons below still only appear on their own
       const poolsRes = await api.get('/pools');
       setPools(poolsRes.data.pools);
     } catch {
@@ -101,15 +103,26 @@ function SupplierDashboard() {
     }
   };
 
-  const handleReject = async (poolId) => {
-    if (!window.confirm('متأكد بدك ترفضي هالسلة؟ رسوم الالتزام رح ترجع كاملة للمحلات.')) return;
-    setActingId(poolId);
+  const openRejectDialog = (poolId) => {
+    setRejectionReason('');
+    setRejectError('');
+    setRejectingPoolId(poolId);
+  };
+
+  const handleReject = async () => {
+    setRejectError('');
+    if (!rejectionReason.trim()) {
+      setRejectError('الرجاء كتابة سبب الرفض');
+      return;
+    }
+    setActingId(rejectingPoolId);
     try {
-      await api.post(`/pools/${poolId}/reject`);
+      await api.post(`/pools/${rejectingPoolId}/reject`, { reason: rejectionReason.trim() });
       setToast('تم رفض السلة، واسترداد رسوم المحلات');
+      setRejectingPoolId(null);
       loadData();
     } catch (err) {
-      setToast(err.response?.data?.message || 'تعذّر رفض السلة');
+      setRejectError(err.response?.data?.message || 'تعذّر رفض السلة');
     } finally {
       setActingId(null);
     }
@@ -132,7 +145,7 @@ function SupplierDashboard() {
   const openCreateDialog = () => {
     setEditingPoolId(null);
     setForm(EMPTY_FORM);
-    setSelectedGovernorate(null); // also clears the zone via the hook's own reset logic
+    setSelectedGovernorate(null);
     setDialogError('');
     setDialogOpen(true);
   };
@@ -272,7 +285,7 @@ function SupplierDashboard() {
             <Button size="small" variant="contained" color="primary" disabled={busy} onClick={() => handleConfirm(pool._id)}>
               تأكيد
             </Button>
-            <Button size="small" variant="outlined" color="error" disabled={busy} onClick={() => handleReject(pool._id)}>
+            <Button size="small" variant="outlined" color="error" disabled={busy} onClick={() => openRejectDialog(pool._id)}>
               رفض
             </Button>
           </>
@@ -459,6 +472,38 @@ function SupplierDashboard() {
           </Button>
           <Button variant="contained" color="warning" disabled={extending} onClick={handleExtend}>
             {extending ? 'جاري التمديد...' : 'تمديد السلة'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!rejectingPoolId} onClose={() => setRejectingPoolId(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>سبب رفض السلة</DialogTitle>
+        <DialogContent>
+          {rejectError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {rejectError}
+            </Alert>
+          )}
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+            الرفض بعد وصول السلة للحد الأدنى بيسجّل غرامة رسمية على حسابك، وبينقص درجة موثوقيتك 10 نقاط.
+          </Alert>
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="سبب الرفض"
+            placeholder="مثلاً: نفدت الكمية من المخزون"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setRejectingPoolId(null)} color="secondary">
+            تراجع
+          </Button>
+          <Button variant="contained" color="error" disabled={actingId === rejectingPoolId} onClick={handleReject}>
+            {actingId === rejectingPoolId ? 'جاري الرفض...' : 'تأكيد الرفض'}
           </Button>
         </DialogActions>
       </Dialog>

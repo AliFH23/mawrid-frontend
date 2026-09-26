@@ -191,6 +191,11 @@ function BuyerDashboard() {
             sx={{ mb: 1 }}
           />
           {quantityDialogPool && (
+            <Typography variant="caption" color="warning.main" sx={{ display: 'block', mb: 1 }}>
+              أقصى كمية مسموحة لمحلك بهالسلة: <b>{Math.floor(quantityDialogPool.minQuantity * 0.7)}</b> قطعة (للحفاظ على مبدأ التجميع بين محلات متعددة)
+            </Typography>
+          )}
+          {quantityDialogPool && (
             <Typography variant="caption" color="text.secondary">
               رسم الالتزام (5%): <b>{commitmentFee.toFixed(2)} د.أ</b> — قابل للاسترداد لو المورد رفض السلة
             </Typography>

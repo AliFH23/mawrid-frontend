@@ -5,8 +5,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { motion } from 'framer-motion';
 
 const NAV_LINKS = [
-  { label: 'كيف تعمل المنصة', sectionId: 'how-it-works' },
   { label: 'للموردين', sectionId: 'why-mawrid' },
+  { label: 'كيف تعمل المنصة', sectionId: 'how-it-works' },
   { label: 'للمشاريع الصغيرة', sectionId: 'live-preview' },
 ];
 

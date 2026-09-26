@@ -1,8 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Chip, CircularProgress, Button, Snackbar, Alert } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Paper,
+  Chip,
+  CircularProgress,
+  Button,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Rating,
+} from '@mui/material';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PaymentIcon from '@mui/icons-material/Payment';
+import ExitToAppIcon from '@mui/icons-material/ExitToApp';
+import StarIcon from '@mui/icons-material/Star';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import PaymentMethodDialog from '../../components/PaymentMethodDialog.jsx';
@@ -35,18 +52,26 @@ const METHOD_LABEL = {
   CLIQ: 'كليك CliQ',
 };
 
-const BUYER_COMMISSION_RATE = 0.01;
-
 function BuyerHistory() {
   const navigate = useNavigate();
   const [shop, setShop] = useState(null);
   const [participations, setParticipations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [leavingId, setLeavingId] = useState(null);
   const [toast, setToast] = useState('');
 
   const [payingParticipation, setPayingParticipation] = useState(null);
+  const [balancePreview, setBalancePreview] = useState(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+
+  // rating dialog
+  const [ratingParticipation, setRatingParticipation] = useState(null);
+  const [ratingStars, setRatingStars] = useState(5);
+  const [ratingComment, setRatingComment] = useState('');
+  const [ratingError, setRatingError] = useState('');
+  const [ratingSaving, setRatingSaving] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -66,17 +91,28 @@ function BuyerHistory() {
     loadData();
   }, []);
 
-  const openPayBalance = (participation) => {
+  const openPayBalance = async (participation) => {
     setPayingParticipation(participation);
+    setBalancePreview(null);
+    setPreviewLoading(true);
+    try {
+      const res = await api.get(`/participations/${participation._id}/balance-preview`);
+      setBalancePreview(res.data.breakdown);
+    } catch {
+      setToast('تعذّر جلب تفاصيل المبلغ المتبقي');
+    } finally {
+      setPreviewLoading(false);
+    }
     setPaymentOpen(true);
   };
 
   const handlePayBalanceConfirmed = async () => {
     try {
-      await api.put(`/participations/${payingParticipation._id}/pay-balance`);
+      const res = await api.put(`/participations/${payingParticipation._id}/pay-balance`);
       setPaymentOpen(false);
       setPayingParticipation(null);
-      setToast('تم دفع المبلغ المتبقي بنجاح ✓');
+      const cashback = res.data.breakdown?.cashbackAmount || 0;
+      setToast(cashback > 0 ? `تم الدفع بنجاح ✓ — ربحتِ ${cashback.toFixed(2)} د.أ كاش باك!` : 'تم دفع المبلغ المتبقي بنجاح ✓');
       loadData();
     } catch (err) {
       setPaymentOpen(false);
@@ -97,6 +133,48 @@ function BuyerHistory() {
     }
   };
 
+  const handleLeave = async (poolId, participationId) => {
+    if (!window.confirm('متأكدة بدك تنسحبي من هالسلة؟ رسم الالتزام يلي دفعتيه رح يضيع (مش مسترد) كعقوبة على الانسحاب الطوعي.')) {
+      return;
+    }
+    setLeavingId(participationId);
+    try {
+      await api.delete(`/pools/${poolId}/leave`);
+      setToast('تم الانسحاب من السلة — رسم الالتزام محتجز');
+      loadData();
+    } catch (err) {
+      setToast(err.response?.data?.message || 'تعذّر الانسحاب من السلة');
+    } finally {
+      setLeavingId(null);
+    }
+  };
+
+  const openRatingDialog = (participation) => {
+    setRatingStars(5);
+    setRatingComment('');
+    setRatingError('');
+    setRatingParticipation(participation);
+  };
+
+  const handleSubmitRating = async () => {
+    setRatingError('');
+    setRatingSaving(true);
+    try {
+      await api.post('/ratings', {
+        poolId: ratingParticipation.poolId._id,
+        stars: ratingStars,
+        comment: ratingComment.trim(),
+      });
+      setToast('شكرًا على تقييمك ✓');
+      setRatingParticipation(null);
+      loadData();
+    } catch (err) {
+      setRatingError(err.response?.data?.message || 'تعذّر إرسال التقييم');
+    } finally {
+      setRatingSaving(false);
+    }
+  };
+
   const navItems = [
     { key: 'pools', label: 'السلات المتاحة', onClick: () => navigate('/shop') },
     { key: 'history', label: 'سلاتي وطلباتي', onClick: () => navigate('/shop/history') },
@@ -107,14 +185,13 @@ function BuyerHistory() {
     <Box sx={{ bgcolor: '#111A30', borderRadius: 2, p: 1.75, mb: 2.5 }}>
       <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{shop.shopName}</Typography>
       <Typography sx={{ color: '#8B95AB', fontSize: 12 }}>{shop.deliveryZone?.name}</Typography>
+      {shop.cashbackBalance > 0 && (
+        <Typography sx={{ color: '#34D399', fontSize: 12, fontWeight: 800, mt: 0.5 }}>
+          رصيد الكاش باك: {shop.cashbackBalance.toFixed(2)} د.أ
+        </Typography>
+      )}
     </Box>
   );
-
-  const remainingBalance = payingParticipation
-    ? payingParticipation.quantity * payingParticipation.poolId.unitPrice -
-      payingParticipation.commitmentFeeAmount +
-      Math.round(payingParticipation.quantity * payingParticipation.poolId.unitPrice * BUYER_COMMISSION_RATE * 100) / 100
-    : 0;
 
   return (
     <DashboardLayout navItems={navItems} activeKey="history" headerCard={headerCard}>
@@ -143,14 +220,14 @@ function BuyerHistory() {
               const feeStatus = FEE_STATUS[p.commitmentFeeStatus] || FEE_STATUS.PAID;
               const deliveryStatus = DELIVERY_STATUS[p.deliveryStatus] || DELIVERY_STATUS.PENDING_DELIVERY;
               const isCash = p.paymentMethod === 'CASH';
-              const buyerCommission = Math.round(p.quantity * pool.unitPrice * BUYER_COMMISSION_RATE * 100) / 100;
-              const balance = p.quantity * pool.unitPrice - p.commitmentFeeAmount + buyerCommission;
 
               const needsOnlinePayment = !isCash && pool.status === 'COMPLETED' && p.finalPaymentStatus === 'PENDING';
               const canConfirmReceipt =
                 pool.status === 'COMPLETED' &&
                 p.deliveryStatus === 'PENDING_DELIVERY' &&
                 (isCash || p.finalPaymentStatus === 'PAID');
+              const canLeave = p.status === 'ACTIVE' && (pool.status === 'OPEN' || pool.status === 'PENDING_SUPPLIER_CONFIRMATION');
+              const canRate = p.deliveryStatus === 'DELIVERED' && !p.rated;
 
               return (
                 <Paper key={p._id} sx={{ p: 2.5, borderRadius: 3 }} elevation={0}>
@@ -161,8 +238,6 @@ function BuyerHistory() {
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         الكمية: {p.quantity} · السعر الإجمالي: {(p.quantity * pool.unitPrice).toFixed(1)} د.أ · طريقة الدفع: {METHOD_LABEL[p.paymentMethod] || 'بطاقة'}
-                        {pool.status === 'COMPLETED' && !isCash && ` · المتبقي (شامل عمولة منصة 1%): ${balance.toFixed(1)} د.أ`}
-                        {pool.status === 'COMPLETED' && isCash && ` · يُدفع نقدًا عند الاستلام (شامل عمولة منصة 1%): ${balance.toFixed(1)} د.أ`}
                       </Typography>
                     </Box>
 
@@ -184,14 +259,17 @@ function BuyerHistory() {
                       {pool.status === 'COMPLETED' && (
                         <Chip label={deliveryStatus.label} size="small" sx={{ bgcolor: deliveryStatus.bg, color: deliveryStatus.color, fontWeight: 700, fontSize: 11 }} />
                       )}
+                      {p.rated && (
+                        <Chip icon={<StarIcon sx={{ fontSize: 14 }} />} label="تم التقييم" size="small" sx={{ bgcolor: '#FFF7ED', color: '#C2410C', fontWeight: 700, fontSize: 11 }} />
+                      )}
                     </Box>
                   </Box>
 
-                  {(needsOnlinePayment || canConfirmReceipt) && (
+                  {(needsOnlinePayment || canConfirmReceipt || canLeave || canRate) && (
                     <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #F1F5F9', display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
                       {needsOnlinePayment && (
                         <Button size="small" variant="contained" color="primary" startIcon={<PaymentIcon />} onClick={() => openPayBalance(p)}>
-                          ادفعي المبلغ المتبقي ({balance.toFixed(1)} د.أ)
+                          ادفعي المبلغ المتبقي
                         </Button>
                       )}
                       {canConfirmReceipt && (
@@ -203,11 +281,24 @@ function BuyerHistory() {
                           disabled={confirmingId === p._id}
                           onClick={() => handleConfirmReceipt(p._id)}
                         >
-                          {confirmingId === p._id
-                            ? 'جاري التأكيد...'
-                            : isCash
-                            ? `أكّدي الاستلام والدفع نقدًا (${balance.toFixed(1)} د.أ)`
-                            : 'أكّدي إنك استلمتِ البضاعة'}
+                          {confirmingId === p._id ? 'جاري التأكيد...' : isCash ? 'أكّدي الاستلام والدفع نقدًا' : 'أكّدي إنك استلمتِ البضاعة'}
+                        </Button>
+                      )}
+                      {canRate && (
+                        <Button size="small" variant="outlined" color="warning" startIcon={<StarIcon />} onClick={() => openRatingDialog(p)}>
+                          قيّمي المورد
+                        </Button>
+                      )}
+                      {canLeave && (
+                        <Button
+                          size="small"
+                          variant="text"
+                          color="error"
+                          startIcon={<ExitToAppIcon />}
+                          disabled={leavingId === p._id}
+                          onClick={() => handleLeave(pool._id, p._id)}
+                        >
+                          {leavingId === p._id ? 'جاري الانسحاب...' : 'الانسحاب من السلة'}
                         </Button>
                       )}
                     </Box>
@@ -222,13 +313,52 @@ function BuyerHistory() {
       <PaymentMethodDialog
         open={paymentOpen}
         onClose={() => setPaymentOpen(false)}
-        amount={remainingBalance}
-        description={`المبلغ المتبقي — ${payingParticipation?.poolId?.productName || ''}`}
+        amount={balancePreview?.totalBalance || 0}
+        description={
+          previewLoading
+            ? 'جاري حساب المبلغ...'
+            : `المبلغ المتبقي — ${payingParticipation?.poolId?.productName || ''}${
+                balancePreview?.loyaltyDiscountAmount > 0
+                  ? ` (شامل خصم ولاء ${Math.round(balancePreview.loyaltyDiscountRate * 100)}%: -${balancePreview.loyaltyDiscountAmount.toFixed(2)} د.أ)`
+                  : ''
+              }`
+        }
         onConfirm={handlePayBalanceConfirmed}
         allowCash={false}
       />
 
-      <Snackbar open={!!toast} autoHideDuration={3500} onClose={() => setToast('')} message={toast} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
+      <Dialog open={!!ratingParticipation} onClose={() => setRatingParticipation(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>قيّمي {ratingParticipation?.poolId?.productName}</DialogTitle>
+        <DialogContent>
+          {ratingError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {ratingError}
+            </Alert>
+          )}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 1 }}>
+            <Rating value={ratingStars} onChange={(e, v) => setRatingStars(v || 1)} size="large" />
+          </Box>
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="تعليق (اختياري)"
+            placeholder="شاركينا تجربتك مع هالمورد"
+            value={ratingComment}
+            onChange={(e) => setRatingComment(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setRatingParticipation(null)} color="secondary">
+            إلغاء
+          </Button>
+          <Button variant="contained" color="primary" disabled={ratingSaving} onClick={handleSubmitRating}>
+            {ratingSaving ? 'جاري الإرسال...' : 'إرسال التقييم'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast('')} message={toast} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
     </DashboardLayout>
   );
 }
