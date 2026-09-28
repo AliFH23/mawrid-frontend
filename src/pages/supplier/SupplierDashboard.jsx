@@ -33,6 +33,15 @@ const EMPTY_FORM = {
   expiryDate: '',
 };
 
+// <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in LOCAL time, while the
+// backend stores/returns UTC ISO strings — this converts one to the other so the
+// picker shows the time the supplier actually meant, not a timezone-shifted one
+const toLocalInputValue = (dateLike) => {
+  const d = new Date(dateLike);
+  const offsetMs = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
+};
+
 function SupplierDashboard() {
   const navigate = useNavigate();
   const [supplier, setSupplier] = useState(null);
@@ -160,7 +169,7 @@ function SupplierDashboard() {
       unitPrice: String(pool.unitPrice),
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
-      expiryDate: pool.expiryDate ? pool.expiryDate.slice(0, 10) : '',
+      expiryDate: pool.expiryDate ? toLocalInputValue(pool.expiryDate) : '',
     });
     presetLocation(pool.deliveryZone?.governorateId || null, pool.deliveryZone || null);
     setDialogOpen(true);
@@ -183,7 +192,8 @@ function SupplierDashboard() {
       unitPrice: Number(unitPrice),
       minQuantity: Number(minQuantity),
       maxQuantity: Number(maxQuantity),
-      expiryDate,
+      // sent as a full ISO timestamp so the server never has to guess the timezone
+      expiryDate: new Date(expiryDate).toISOString(),
     };
 
     setSaving(true);
@@ -208,19 +218,21 @@ function SupplierDashboard() {
 
   const openExtendDialog = (pool) => {
     setExtendError('');
-    setNewExpiryDate(pool.expiryDate ? pool.expiryDate.slice(0, 10) : '');
+    setNewExpiryDate(pool.expiryDate ? toLocalInputValue(pool.expiryDate) : '');
     setExtendingPool(pool);
   };
 
   const handleExtend = async () => {
     setExtendError('');
     if (!newExpiryDate) {
-      setExtendError('الرجاء تحديد تاريخ انتهاء جديد');
+      setExtendError('الرجاء تحديد تاريخ ووقت انتهاء جديد');
       return;
     }
     setExtending(true);
     try {
-      await api.put(`/pools/${extendingPool._id}/extend`, { newExpiryDate });
+      await api.put(`/pools/${extendingPool._id}/extend`, {
+        newExpiryDate: new Date(newExpiryDate).toISOString(),
+      });
       setToast('تم تمديد السلة بنجاح ✓');
       setExtendingPool(null);
       loadData();
@@ -428,9 +440,10 @@ function SupplierDashboard() {
           </Box>
           <TextField
             fullWidth
-            type="date"
-            label="تاريخ الانتهاء"
+            type="datetime-local"
+            label="تاريخ ووقت الانتهاء"
             InputLabelProps={{ shrink: true }}
+            inputProps={{ min: toLocalInputValue(new Date()) }}
             value={form.expiryDate}
             onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
           />
@@ -454,13 +467,14 @@ function SupplierDashboard() {
             </Alert>
           )}
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            التاريخ الحالي: {extendingPool ? new Date(extendingPool.expiryDate).toLocaleDateString('ar-EG') : ''}
+            الموعد الحالي: {extendingPool ? new Date(extendingPool.expiryDate).toLocaleString('ar-EG') : ''}
           </Typography>
           <TextField
             fullWidth
-            type="date"
-            label="تاريخ الانتهاء الجديد"
+            type="datetime-local"
+            label="تاريخ ووقت الانتهاء الجديد"
             InputLabelProps={{ shrink: true }}
+            inputProps={{ min: extendingPool ? toLocalInputValue(extendingPool.expiryDate) : undefined }}
             value={newExpiryDate}
             onChange={(e) => setNewExpiryDate(e.target.value)}
             sx={{ mt: 1 }}
