@@ -93,8 +93,7 @@ function AdminTransactions() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    {['التاريخ والوقت', 'النوع', 'المبلغ', 'الوصف', 'السلة'].map((h) => (
-                      <th key={h} style={{ textAlign: 'right', fontSize: 12, color: '#94A3B8', padding: '10px 12px', borderBottom: '1px solid #EEF2F6' }}>
+                    {['التاريخ والوقت', 'النوع', 'المبلغ', 'الجهة الدافعة', 'الوصف', 'السلة'].map((h) => (                      <th key={h} style={{ textAlign: 'right', fontSize: 12, color: '#94A3B8', padding: '10px 12px', borderBottom: '1px solid #EEF2F6' }}>
                         {h}
                       </th>
                     ))}
@@ -113,6 +112,9 @@ function AdminTransactions() {
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontWeight: 700, fontSize: 13 }}>
                           {tx.amount.toFixed(2)} د.أ
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>
+                          {tx.shopId?.shopName || tx.supplierId?.companyName || '—'}
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#334155' }}>{tx.description}</td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>{tx.poolId?.productName || '—'}</td>

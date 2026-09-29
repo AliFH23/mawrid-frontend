@@ -44,39 +44,41 @@ function Register() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [shopName, setShopName] = useState('');
+  const [shopRegNumber, setShopRegNumber] = useState('');
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
 
-  // governorate/zone cascading logic now comes from the shared hook instead of
-  // being duplicated in this file
   const { governorates, zones, zonesLoading, selectedGovernorate, selectedZone, setSelectedGovernorate, setSelectedZone } =
     useLocationPicker();
 
   const [companyName, setCompanyName] = useState('');
   const [companyDescription, setCompanyDescription] = useState('');
   const [supplierRegNumber, setSupplierRegNumber] = useState('');
-  const [shopRegNumber, setShopRegNumber] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false);
 
   useEffect(() => {
     api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
   }, []);
 
-  const [checkingEmail, setCheckingEmail] = useState(false);
-
   const handleNext = async () => {
     setError('');
-    if (!name || !email || !phone || !password) {
+    if (!name || !email || !phone || !password || !confirmPassword) {
       setError('الرجاء تعبئة كل الحقول');
       return;
     }
     if (!isPasswordStrong(password)) {
       setError(PASSWORD_HINT);
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('كلمة المرور وتأكيدها غير متطابقين');
       return;
     }
 
@@ -110,7 +112,7 @@ function Register() {
       return;
     }
     if (role === 'supplier' && (!companyName || !supplierRegNumber)) {
-      setError('الرجاء إدخال اسم الشركة');
+      setError('الرجاء تعبئة بيانات الشركة كاملة');
       return;
     }
 
@@ -282,6 +284,32 @@ function Register() {
               placeholder="8 أحرف، حرف كبير وصغير ورقم"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <LockOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" size="small">
+                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
+              تأكيد كلمة المرور
+            </Typography>
+                        <TextField
+              fullWidth
+              type={showPassword ? 'text' : 'password'}
+              placeholder="أعيدي كتابة كلمة المرور"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               sx={{ mb: 1 }}
               InputProps={{
                 startAdornment: (
@@ -302,7 +330,15 @@ function Register() {
               {PASSWORD_HINT}
             </Typography>
 
-            <Button fullWidth variant="contained" color="primary" size="large" onClick={handleNext} disabled={checkingEmail} endIcon={<ArrowForwardIcon />}>
+            <Button
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="large"
+              onClick={handleNext}
+              disabled={checkingEmail}
+              endIcon={<ArrowForwardIcon />}
+            >
               {checkingEmail ? 'جاري التحقق...' : 'التالي'}
             </Button>
           </AnimatedPage>

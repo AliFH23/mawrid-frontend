@@ -33,9 +33,6 @@ const EMPTY_FORM = {
   expiryDate: '',
 };
 
-// <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm" in LOCAL time, while the
-// backend stores/returns UTC ISO strings — this converts one to the other so the
-// picker shows the time the supplier actually meant, not a timezone-shifted one
 const toLocalInputValue = (dateLike) => {
   const d = new Date(dateLike);
   const offsetMs = d.getTimezoneOffset() * 60000;
@@ -73,8 +70,13 @@ function SupplierDashboard() {
   const [extendError, setExtendError] = useState('');
   const [extending, setExtending] = useState(false);
 
-  // reject dialog — collects a mandatory reason (backend requires it, and it becomes
-  // the formal Fine record's reason too)
+  // increase-max-quantity dialog — for a pool that's hit its cap while buyers still
+  // want in
+  const [increasingMaxPool, setIncreasingMaxPool] = useState(null);
+  const [newMaxQuantity, setNewMaxQuantity] = useState('');
+  const [increaseMaxError, setIncreaseMaxError] = useState('');
+  const [increasingMax, setIncreasingMax] = useState(false);
+
   const [rejectingPoolId, setRejectingPoolId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectError, setRejectError] = useState('');
@@ -192,7 +194,6 @@ function SupplierDashboard() {
       unitPrice: Number(unitPrice),
       minQuantity: Number(minQuantity),
       maxQuantity: Number(maxQuantity),
-      // sent as a full ISO timestamp so the server never has to guess the timezone
       expiryDate: new Date(expiryDate).toISOString(),
     };
 
@@ -243,6 +244,32 @@ function SupplierDashboard() {
     }
   };
 
+  const openIncreaseMaxDialog = (pool) => {
+    setIncreaseMaxError('');
+    setNewMaxQuantity(String(pool.maxQuantity));
+    setIncreasingMaxPool(pool);
+  };
+
+  const handleIncreaseMax = async () => {
+    setIncreaseMaxError('');
+    const val = Number(newMaxQuantity);
+    if (!val || val <= increasingMaxPool.maxQuantity) {
+      setIncreaseMaxError(`الرجاء إدخال رقم أكبر من الحد الأقصى الحالي (${increasingMaxPool.maxQuantity})`);
+      return;
+    }
+    setIncreasingMax(true);
+    try {
+      await api.put(`/pools/${increasingMaxPool._id}/increase-max`, { newMaxQuantity: val });
+      setToast('تم رفع الحد الأقصى بنجاح ✓');
+      setIncreasingMaxPool(null);
+      loadData();
+    } catch (err) {
+      setIncreaseMaxError(err.response?.data?.message || 'تعذّر رفع الحد الأقصى');
+    } finally {
+      setIncreasingMax(false);
+    }
+  };
+
   const navItems = [
     { key: 'pools', label: 'السلات', onClick: () => navigate('/supplier') },
     { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
@@ -273,16 +300,15 @@ function SupplierDashboard() {
     const busy = actingId === pool._id;
     const isOwnPool = supplier && pool.supplierId?._id === supplier._id;
 
+    // not your pool — no "التفاصيل" link at all: the participants list behind it
+    // includes buyer names and phone numbers, which is only appropriate for the
+    // pool's own owner (and the backend already 403s this, this just avoids
+    // showing a dead-end button in the first place)
     if (!isOwnPool) {
       return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Button size="small" variant="text" onClick={() => navigate(`/pools/${pool._id}`)}>
-            التفاصيل
-          </Button>
-          {pool.supplierId?.companyName && (
-            <Chip label={pool.supplierId.companyName} size="small" sx={{ bgcolor: '#F1F5F9', color: '#64748B', fontSize: 11 }} />
-          )}
-        </Box>
+        pool.supplierId?.companyName && (
+          <Chip label={pool.supplierId.companyName} size="small" sx={{ bgcolor: '#F1F5F9', color: '#64748B', fontSize: 11 }} />
+        )
       );
     }
 
@@ -310,6 +336,9 @@ function SupplierDashboard() {
             </Button>
             <Button size="small" variant="outlined" color="warning" disabled={busy} onClick={() => openExtendDialog(pool)}>
               تمديد
+            </Button>
+            <Button size="small" variant="outlined" color="success" disabled={busy} onClick={() => openIncreaseMaxDialog(pool)}>
+              زيادة الحد الأقصى
             </Button>
             <Button size="small" variant="text" color="error" disabled={busy} onClick={() => handleCancel(pool._id)}>
               إلغاء السلة
@@ -486,6 +515,36 @@ function SupplierDashboard() {
           </Button>
           <Button variant="contained" color="warning" disabled={extending} onClick={handleExtend}>
             {extending ? 'جاري التمديد...' : 'تمديد السلة'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!increasingMaxPool} onClose={() => setIncreasingMaxPool(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>زيادة الحد الأقصى — {increasingMaxPool?.productName}</DialogTitle>
+        <DialogContent>
+          {increaseMaxError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {increaseMaxError}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            الحد الأقصى الحالي: {increasingMaxPool?.maxQuantity} — الكمية المنضمّة حاليًا: {increasingMaxPool?.currentQuantity}
+          </Typography>
+          <TextField
+            fullWidth
+            type="number"
+            label="الحد الأقصى الجديد"
+            value={newMaxQuantity}
+            onChange={(e) => setNewMaxQuantity(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setIncreasingMaxPool(null)} color="secondary">
+            إلغاء
+          </Button>
+          <Button variant="contained" color="success" disabled={increasingMax} onClick={handleIncreaseMax}>
+            {increasingMax ? 'جاري الرفع...' : 'رفع الحد الأقصى'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -16,6 +16,7 @@ import {
   TextField,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import PoolCard from '../../components/PoolCard.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
@@ -43,8 +44,11 @@ function BuyerDashboard() {
       const shopRes = await api.get('/shops/me');
       setShop(shopRes.data.shop);
 
+      // no deliveryZone filter anymore — buyers can browse every open pool on the
+      // platform, not just their own zone. Out-of-zone pools get a delivery-fee note
+      // in the card below instead of being hidden entirely.
       const [poolsRes, participationsRes] = await Promise.all([
-        api.get('/pools', { params: { deliveryZone: shopRes.data.shop.deliveryZone._id, status: 'OPEN' } }),
+        api.get('/pools', { params: { status: 'OPEN' } }),
         api.get('/participations/me'),
       ]);
 
@@ -81,7 +85,7 @@ function BuyerDashboard() {
       return;
     }
     if (qty > remaining) {
-      setQuantityError(`أقصى كمية متاحة حاليًا: ${remaining}`);
+      setQuantityError(`أقصى كمية متاحة حاليًا: ${remaining} — استني المورد يرفع الحد الأقصى، أو قلّلي طلبك`);
       return;
     }
     setQuantityError('');
@@ -118,6 +122,8 @@ function BuyerDashboard() {
     ? Math.round(Number(quantity || 0) * quantityDialogPool.unitPrice * COMMITMENT_FEE_RATE * 100) / 100
     : 0;
 
+  const isOutOfZone = (pool) => shop && pool.deliveryZone?._id !== shop.deliveryZone?._id;
+
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
       <AnimatedPage>
@@ -125,7 +131,7 @@ function BuyerDashboard() {
           السلات المتاحة
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          سلات ضمن منطقة "{shop?.deliveryZone?.name}" — مطابقة لمحلك تلقائيًا
+          كل السلات المفتوحة بالمنصة — السلات برّا منطقتك ("{shop?.deliveryZone?.name}") معلّمة بملاحظة رسوم توصيل
         </Typography>
 
         {loading ? (
@@ -134,31 +140,53 @@ function BuyerDashboard() {
           </Box>
         ) : pools.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>
-            ما في سلات مفتوحة بمنطقتك حاليًا — رجعي لاحقًا
+            ما في سلات مفتوحة بالمنصة حاليًا — رجعي لاحقًا
           </Alert>
         ) : (
           <Grid container spacing={2.5}>
             {pools.map((pool) => {
               const alreadyJoined = joinedPoolIds.has(pool._id);
+              const outOfZone = isOutOfZone(pool);
               return (
                 <Grid item xs={12} sm={6} md={4} key={pool._id}>
-                  <PoolCard
-                    pool={pool}
-                    action={
-                      alreadyJoined ? (
-                        <Chip
-                          icon={<CheckCircleIcon sx={{ fontSize: 16 }} />}
-                          label="منضمة بالفعل"
-                          size="small"
-                          sx={{ bgcolor: '#E7F8F0', color: '#047857', fontWeight: 700 }}
-                        />
-                      ) : (
-                        <Button size="small" variant="contained" color="primary" onClick={() => openQuantityDialog(pool)}>
-                          انضم للسلة
-                        </Button>
-                      )
-                    }
-                  />
+                  <Box>
+                    {outOfZone && (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.75,
+                          bgcolor: '#FEF3E2',
+                          color: '#B45309',
+                          borderRadius: '10px 10px 0 0',
+                          px: 1.5,
+                          py: 0.75,
+                          fontSize: 12,
+                          fontWeight: 700,
+                        }}
+                      >
+                        <LocalShippingOutlinedIcon sx={{ fontSize: 15 }} />
+                        خارج منطقتك ({pool.deliveryZone?.name}) — رسوم توصيل إضافية تُتّفق مباشرة مع المورد
+                      </Box>
+                    )}
+                    <PoolCard
+                      pool={pool}
+                      action={
+                        alreadyJoined ? (
+                          <Chip
+                            icon={<CheckCircleIcon sx={{ fontSize: 16 }} />}
+                            label="منضمة بالفعل"
+                            size="small"
+                            sx={{ bgcolor: '#E7F8F0', color: '#047857', fontWeight: 700 }}
+                          />
+                        ) : (
+                          <Button size="small" variant="contained" color="primary" onClick={() => openQuantityDialog(pool)}>
+                            انضم للسلة
+                          </Button>
+                        )
+                      }
+                    />
+                  </Box>
                 </Grid>
               );
             })}
@@ -169,6 +197,11 @@ function BuyerDashboard() {
       <Dialog open={!!quantityDialogPool} onClose={() => setQuantityDialogPool(null)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>الانضمام لسلة {quantityDialogPool?.productName}</DialogTitle>
         <DialogContent>
+          {quantityDialogPool && isOutOfZone(quantityDialogPool) && (
+            <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} icon={<LocalShippingOutlinedIcon />}>
+              هاي السلة خارج منطقتك ({quantityDialogPool.deliveryZone?.name}) — رح تحتاجي تتفقي مع المورد مباشرة على رسوم توصيل إضافية قبل التأكيد.
+            </Alert>
+          )}
           {quantityDialogPool?.description && (
             <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
               {quantityDialogPool.description}
