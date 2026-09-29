@@ -68,11 +68,18 @@ function PoolCard({ pool, action }) {
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1.5, borderTop: '1px solid #F1F5F9' }}>
-          <Typography fontWeight={800} color="primary.dark" fontSize={14}>
+        {/* footer stacked vertically: price row on top, actions get their own
+            full-width row below so they can wrap cleanly no matter how many
+            buttons a given pool status needs */}
+        <Box sx={{ pt: 1.5, borderTop: '1px solid #F1F5F9' }}>
+          <Typography fontWeight={800} color="primary.dark" fontSize={14} sx={{ mb: action ? 1 : 0 }}>
             {pool.unitPrice} د.أ / قطعة
           </Typography>
-          {action}
+          {action && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+              {action}
+            </Box>
+          )}
         </Box>
       </Card>
     </motion.div>

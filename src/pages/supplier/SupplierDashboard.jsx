@@ -4,6 +4,11 @@ import {
   Box,
   Typography,
   Button,
+  IconButton,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
   CircularProgress,
   Alert,
   Snackbar,
@@ -17,6 +22,11 @@ import {
   LinearProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import EditIcon from '@mui/icons-material/Edit';
+import UpdateIcon from '@mui/icons-material/Update';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import UnfoldMoreIcon from '@mui/icons-material/UnfoldMore';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import PoolCard from '../../components/PoolCard.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
@@ -70,16 +80,24 @@ function SupplierDashboard() {
   const [extendError, setExtendError] = useState('');
   const [extending, setExtending] = useState(false);
 
-  // increase-max-quantity dialog — for a pool that's hit its cap while buyers still
-  // want in
   const [increasingMaxPool, setIncreasingMaxPool] = useState(null);
   const [newMaxQuantity, setNewMaxQuantity] = useState('');
   const [increaseMaxError, setIncreaseMaxError] = useState('');
   const [increasingMax, setIncreasingMax] = useState(false);
 
+  // new: raise the per-shop pooling cap by raising minQuantity itself
+  const [increasingMinPool, setIncreasingMinPool] = useState(null);
+  const [newMinQuantity, setNewMinQuantity] = useState('');
+  const [increaseMinError, setIncreaseMinError] = useState('');
+  const [increasingMin, setIncreasingMin] = useState(false);
+
   const [rejectingPoolId, setRejectingPoolId] = useState(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [rejectError, setRejectError] = useState('');
+
+  // overflow menu — which pool's "⋮" menu is currently open, and its anchor element
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [menuPool, setMenuPool] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -270,6 +288,45 @@ function SupplierDashboard() {
     }
   };
 
+  const openIncreaseMinDialog = (pool) => {
+    setIncreaseMinError('');
+    setNewMinQuantity(String(pool.minQuantity));
+    setIncreasingMinPool(pool);
+  };
+
+  const handleIncreaseMin = async () => {
+    setIncreaseMinError('');
+    const val = Number(newMinQuantity);
+    if (!val || val <= increasingMinPool.minQuantity) {
+      setIncreaseMinError(`الرجاء إدخال رقم أكبر من الحد الأدنى الحالي (${increasingMinPool.minQuantity})`);
+      return;
+    }
+    if (val > increasingMinPool.maxQuantity) {
+      setIncreaseMinError(`ما يقدر يتجاوز الحد الأقصى (${increasingMinPool.maxQuantity})`);
+      return;
+    }
+    setIncreasingMin(true);
+    try {
+      await api.put(`/pools/${increasingMinPool._id}/increase-min`, { newMinQuantity: val });
+      setToast('تم رفع الحد الأدنى بنجاح ✓');
+      setIncreasingMinPool(null);
+      loadData();
+    } catch (err) {
+      setIncreaseMinError(err.response?.data?.message || 'تعذّر رفع الحد الأدنى');
+    } finally {
+      setIncreasingMin(false);
+    }
+  };
+
+  const openMenu = (e, pool) => {
+    setMenuAnchor(e.currentTarget);
+    setMenuPool(pool);
+  };
+  const closeMenu = () => {
+    setMenuAnchor(null);
+    setMenuPool(null);
+  };
+
   const navItems = [
     { key: 'pools', label: 'السلات', onClick: () => navigate('/supplier') },
     { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
@@ -296,14 +353,13 @@ function SupplierDashboard() {
     </Box>
   );
 
+  // for OPEN pools: only "التفاصيل" and "إلغاء" stay as direct buttons — everything
+  // else (تعديل / تمديد / رفع الحد الأقصى / رفع الحد الأدنى) lives behind one "⋮"
+  // menu, so the card never has more than 3 visible controls regardless of status
   const renderAction = (pool) => {
     const busy = actingId === pool._id;
     const isOwnPool = supplier && pool.supplierId?._id === supplier._id;
 
-    // not your pool — no "التفاصيل" link at all: the participants list behind it
-    // includes buyer names and phone numbers, which is only appropriate for the
-    // pool's own owner (and the backend already 403s this, this just avoids
-    // showing a dead-end button in the first place)
     if (!isOwnPool) {
       return (
         pool.supplierId?.companyName && (
@@ -313,7 +369,7 @@ function SupplierDashboard() {
     }
 
     return (
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+      <>
         <Button size="small" variant="text" onClick={() => navigate(`/pools/${pool._id}`)}>
           التفاصيل
         </Button>
@@ -331,21 +387,15 @@ function SupplierDashboard() {
 
         {pool.status === 'OPEN' && (
           <>
-            <Button size="small" variant="outlined" color="primary" disabled={busy} onClick={() => openEditDialog(pool)}>
-              تعديل
-            </Button>
-            <Button size="small" variant="outlined" color="warning" disabled={busy} onClick={() => openExtendDialog(pool)}>
-              تمديد
-            </Button>
-            <Button size="small" variant="outlined" color="success" disabled={busy} onClick={() => openIncreaseMaxDialog(pool)}>
-              زيادة الحد الأقصى
-            </Button>
             <Button size="small" variant="text" color="error" disabled={busy} onClick={() => handleCancel(pool._id)}>
-              إلغاء السلة
+              إلغاء
             </Button>
+            <IconButton size="small" disabled={busy} onClick={(e) => openMenu(e, pool)} sx={{ ml: -0.5 }}>
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
           </>
         )}
-      </Box>
+      </>
     );
   };
 
@@ -382,6 +432,54 @@ function SupplierDashboard() {
           </Box>
         )}
       </AnimatedPage>
+
+      {/* the "⋮" overflow menu for an OPEN pool's secondary actions */}
+      <Menu anchorEl={menuAnchor} open={!!menuAnchor} onClose={closeMenu}>
+        <MenuItem
+          onClick={() => {
+            openEditDialog(menuPool);
+            closeMenu();
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>تعديل السلة</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            openExtendDialog(menuPool);
+            closeMenu();
+          }}
+        >
+          <ListItemIcon>
+            <UpdateIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>تمديد الموعد</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            openIncreaseMaxDialog(menuPool);
+            closeMenu();
+          }}
+        >
+          <ListItemIcon>
+            <TrendingUpIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>زيادة الحد الأقصى (السلة ممتلئة)</ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            openIncreaseMinDialog(menuPool);
+            closeMenu();
+          }}
+        >
+          <ListItemIcon>
+            <UnfoldMoreIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>زيادة الحد الأدنى (محل بده حصة أكبر)</ListItemText>
+        </MenuItem>
+      </Menu>
 
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>{editingPoolId ? 'تعديل السلة' : 'اقتراح سلة جديدة'}</DialogTitle>
@@ -527,6 +625,9 @@ function SupplierDashboard() {
               {increaseMaxError}
             </Alert>
           )}
+          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+            استخدمي هاي لو السلة امتلأت بالكامل وفي محلات كمان بدها تنضم — ما بيأثر على نصيب أي محل الفردي.
+          </Alert>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             الحد الأقصى الحالي: {increasingMaxPool?.maxQuantity} — الكمية المنضمّة حاليًا: {increasingMaxPool?.currentQuantity}
           </Typography>
@@ -545,6 +646,39 @@ function SupplierDashboard() {
           </Button>
           <Button variant="contained" color="success" disabled={increasingMax} onClick={handleIncreaseMax}>
             {increasingMax ? 'جاري الرفع...' : 'رفع الحد الأقصى'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!increasingMinPool} onClose={() => setIncreasingMinPool(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>زيادة الحد الأدنى — {increasingMinPool?.productName}</DialogTitle>
+        <DialogContent>
+          {increaseMinError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {increaseMinError}
+            </Alert>
+          )}
+          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+            استخدمي هاي لو محل واحد بده كمية أكبر من الحد المسموح له (70% من الحد الأدنى) — رفع الحد الأدنى بيرفع نصيب كل محل تلقائيًا، وبيضل يضمن مشاركة محلين على الأقل.
+          </Alert>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            الحد الأدنى الحالي: {increasingMinPool?.minQuantity} — الحد الأقصى: {increasingMinPool?.maxQuantity}
+          </Typography>
+          <TextField
+            fullWidth
+            type="number"
+            label="الحد الأدنى الجديد"
+            value={newMinQuantity}
+            onChange={(e) => setNewMinQuantity(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setIncreasingMinPool(null)} color="secondary">
+            إلغاء
+          </Button>
+          <Button variant="contained" color="success" disabled={increasingMin} onClick={handleIncreaseMin}>
+            {increasingMin ? 'جاري الرفع...' : 'رفع الحد الأدنى'}
           </Button>
         </DialogActions>
       </Dialog>
