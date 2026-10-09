@@ -7,6 +7,11 @@ import { logout } from '../utils/logout.js';
 
 const drawerWidth = 260;
 
+// applied to everything that is navigation chrome rather than page content, so a
+// "Save as PDF" print shows only the page itself (the "@media print" key must stay
+// LAST in each sx object so it wins over the responsive display rules above it)
+const hideOnPrint = { '@media print': { display: 'none !important' } };
+
 function DashboardLayout({ navItems, activeKey, headerCard, children }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -73,6 +78,7 @@ function DashboardLayout({ navItems, activeKey, headerCard, children }) {
           display: { xs: 'flex', md: 'none' },
           bgcolor: 'secondary.main',
           boxShadow: 'none',
+          ...hideOnPrint,
         }}
       >
         <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -98,6 +104,7 @@ function DashboardLayout({ navItems, activeKey, headerCard, children }) {
             display: 'flex',
             flexDirection: 'column',
           },
+          ...hideOnPrint,
         }}
       >
         {drawerContent}
@@ -119,12 +126,22 @@ function DashboardLayout({ navItems, activeKey, headerCard, children }) {
             display: 'flex',
             flexDirection: 'column',
           },
+          ...hideOnPrint,
         }}
       >
         {drawerContent}
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, p: { xs: 2.5, md: 4 }, mt: { xs: 7, md: 0 } }}>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: { xs: 2.5, md: 4 },
+          mt: { xs: 7, md: 0 },
+          // no sidebar when printing, so drop the page padding and the mobile-toolbar offset too
+          '@media print': { p: '0 !important', mt: '0 !important' },
+        }}
+      >
         {children}
       </Box>
     </Box>

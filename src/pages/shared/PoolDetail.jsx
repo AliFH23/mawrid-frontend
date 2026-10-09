@@ -1,6 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Chip, CircularProgress, Alert, Button, LinearProgress } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Paper,
+  Chip,
+  CircularProgress,
+  Alert,
+  Button,
+  LinearProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Snackbar,
+} from '@mui/material';
+import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
@@ -20,6 +36,12 @@ const FEE_STATUS = {
   FORFEITED: { label: 'محتجز', bg: '#FDECEC', color: '#DC2626' },
 };
 
+const DELIVERY_STATUS = {
+  PENDING_DELIVERY: { label: 'بانتظار الشحن', bg: '#FEF3E2', color: '#B45309' },
+  OUT_FOR_DELIVERY: { label: 'في الطريق', bg: '#EFF6FF', color: '#1D4ED8' },
+  DELIVERED: { label: 'تم الاستلام', bg: '#E7F8F0', color: '#047857' },
+};
+
 // used by both the supplier (their own pools) and the admin (any pool)
 function PoolDetail() {
   const { id } = useParams();
@@ -28,6 +50,13 @@ function PoolDetail() {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState('');
+
+  // shipping dialog — target is either one participation or the whole pool
+  const [shipTarget, setShipTarget] = useState(null); // { type: 'one', participation } | { type: 'all' }
+  const [expectedDate, setExpectedDate] = useState('');
+  const [shipError, setShipError] = useState('');
+  const [shipping, setShipping] = useState(false);
 
   const isAdmin = JSON.parse(localStorage.getItem('mawrid_user') || '{}').role === 'admin';
 
@@ -51,6 +80,38 @@ function PoolDetail() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  const openShipDialog = (target) => {
+    setExpectedDate('');
+    setShipError('');
+    setShipTarget(target);
+  };
+
+  const handleShip = async () => {
+    setShipError('');
+    setShipping(true);
+    try {
+      const body = expectedDate ? { expectedDeliveryDate: new Date(expectedDate).toISOString() } : {};
+      if (shipTarget.type === 'all') {
+        const res = await api.put(`/participations/pool/${id}/mark-shipped`, body);
+        const { shippedCount, skippedCount } = res.data;
+        setToast(
+          skippedCount > 0
+            ? `تم شحن ${shippedCount} طلب — ${skippedCount} بانتظار دفع المحل للمبلغ المتبقي`
+            : `تم شحن ${shippedCount} طلب ✓`
+        );
+      } else {
+        await api.put(`/participations/${shipTarget.participation._id}/mark-shipped`, body);
+        setToast('تم تعليم الطلب كمشحون ✓');
+      }
+      setShipTarget(null);
+      loadData();
+    } catch (err) {
+      setShipError(err.response?.data?.message || 'تعذّر تحديث حالة الشحن');
+    } finally {
+      setShipping(false);
+    }
+  };
 
   const backPath = isAdmin ? '/admin/pools' : '/supplier';
   const navItems = isAdmin
@@ -98,6 +159,13 @@ function PoolDetail() {
   const status = STATUS_STYLES[pool.status] || STATUS_STYLES.OPEN;
   const percentage = Math.min(100, Math.round((pool.currentQuantity / pool.minQuantity) * 100));
   const categoryLabel = (pool.categoryIds || []).map((c) => c.name).join('، ');
+
+  const canManageShipping = !isAdmin && pool.status === 'COMPLETED';
+  const isShippable = (p) =>
+    p.status === 'ACTIVE' &&
+    p.deliveryStatus === 'PENDING_DELIVERY' &&
+    (p.paymentMethod === 'CASH' || p.finalPaymentStatus === 'PAID');
+  const readyCount = participants.filter(isShippable).length;
 
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
@@ -150,9 +218,22 @@ function PoolDetail() {
           </Box>
         </Paper>
 
-        <Typography variant="h6" fontWeight={800} sx={{ mb: 2 }}>
-          المحلات المشاركة
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mb: 2 }}>
+          <Typography variant="h6" fontWeight={800}>
+            المحلات المشاركة
+          </Typography>
+          {canManageShipping && (
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<LocalShippingOutlinedIcon />}
+              disabled={readyCount === 0}
+              onClick={() => openShipDialog({ type: 'all' })}
+            >
+              {readyCount > 0 ? `شحن كل الطلبات الجاهزة (${readyCount})` : 'ما في طلبات جاهزة للشحن'}
+            </Button>
+          )}
+        </Box>
 
         {participants.length === 0 ? (
           <Alert severity="info" sx={{ borderRadius: 2 }}>
@@ -164,7 +245,7 @@ function PoolDetail() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    {['المحل', 'صاحب المحل', 'الكمية', 'قيمة الطلب', 'رسم الالتزام', 'طريقة الدفع'].map((h) => (
+                    {['المحل', 'صاحب المحل', 'الكمية', 'قيمة الطلب', 'رسم الالتزام', 'طريقة الدفع', ...(pool.status === 'COMPLETED' ? ['التوصيل'] : [])].map((h) => (
                       <th key={h} style={{ textAlign: 'right', fontSize: 12, color: '#94A3B8', padding: '10px 12px', borderBottom: '1px solid #EEF2F6' }}>
                         {h}
                       </th>
@@ -188,6 +269,39 @@ function PoolDetail() {
                           <Chip label={feeStatus.label} size="small" sx={{ bgcolor: feeStatus.bg, color: feeStatus.color, fontWeight: 700, fontSize: 11 }} />
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>{p.paymentMethod || 'CARD'}</td>
+                        {pool.status === 'COMPLETED' && (
+                          <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', whiteSpace: 'nowrap' }}>
+                            {p.status !== 'ACTIVE' ? (
+                              '—'
+                            ) : (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Chip
+                                  label={(DELIVERY_STATUS[p.deliveryStatus] || DELIVERY_STATUS.PENDING_DELIVERY).label}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: (DELIVERY_STATUS[p.deliveryStatus] || DELIVERY_STATUS.PENDING_DELIVERY).bg,
+                                    color: (DELIVERY_STATUS[p.deliveryStatus] || DELIVERY_STATUS.PENDING_DELIVERY).color,
+                                    fontWeight: 700,
+                                    fontSize: 11,
+                                  }}
+                                />
+                                {canManageShipping && isShippable(p) && (
+                                  <Button size="small" variant="text" onClick={() => openShipDialog({ type: 'one', participation: p })}>
+                                    تم الشحن
+                                  </Button>
+                                )}
+                                {canManageShipping &&
+                                  p.deliveryStatus === 'PENDING_DELIVERY' &&
+                                  p.paymentMethod !== 'CASH' &&
+                                  p.finalPaymentStatus !== 'PAID' && (
+                                    <Typography variant="caption" color="text.secondary">
+                                      بانتظار دفع المتبقي
+                                    </Typography>
+                                  )}
+                              </Box>
+                            )}
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
@@ -197,6 +311,43 @@ function PoolDetail() {
           </Paper>
         )}
       </AnimatedPage>
+
+      <Dialog open={!!shipTarget} onClose={() => setShipTarget(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          {shipTarget?.type === 'all' ? 'شحن كل الطلبات الجاهزة' : `شحن طلب ${shipTarget?.participation?.shopId?.shopName || ''}`}
+        </DialogTitle>
+        <DialogContent>
+          {shipError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {shipError}
+            </Alert>
+          )}
+          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+            {shipTarget?.type === 'all'
+              ? `رح يتعلّم ${readyCount} طلب كـ "في الطريق". الطلبات يلي لسا المحل ما دفع متبقيها (غير الكاش) ما رح تنشحن.`
+              : 'رح تظهر للمحل حالة "في الطريق" بصفحة طلباته، وبعدها بيقدر يأكّد الاستلام.'}
+          </Alert>
+          <TextField
+            fullWidth
+            type="date"
+            label="تاريخ التوصيل المتوقّع (اختياري)"
+            InputLabelProps={{ shrink: true }}
+            value={expectedDate}
+            onChange={(e) => setExpectedDate(e.target.value)}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setShipTarget(null)} color="secondary">
+            إلغاء
+          </Button>
+          <Button variant="contained" color="primary" disabled={shipping} onClick={handleShip}>
+            {shipping ? 'جاري التحديث...' : 'تأكيد الشحن'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar open={!!toast} autoHideDuration={4000} onClose={() => setToast('')} message={toast} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
     </DashboardLayout>
   );
 }

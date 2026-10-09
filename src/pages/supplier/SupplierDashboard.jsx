@@ -20,6 +20,8 @@ import {
   Autocomplete,
   Chip,
   LinearProgress,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -43,6 +45,15 @@ const EMPTY_FORM = {
   expiryDate: '',
 };
 
+// pool list is split by lifecycle stage; EXPIRED and CANCELLED share one tab
+// because from the supplier's side both mean "nothing left to do here"
+const STATUS_TABS = [
+  { key: 'OPEN', label: 'مفتوحة', statuses: ['OPEN'], empty: 'ما في سلات مفتوحة حاليًا' },
+  { key: 'PENDING', label: 'بانتظار التأكيد', statuses: ['PENDING_SUPPLIER_CONFIRMATION'], empty: 'ما في سلات بانتظار تأكيدك' },
+  { key: 'COMPLETED', label: 'مؤكّدة', statuses: ['COMPLETED'], empty: 'ما في سلات مؤكّدة بعد' },
+  { key: 'CLOSED', label: 'منتهية وملغاة', statuses: ['EXPIRED', 'CANCELLED'], empty: 'ما في سلات منتهية أو ملغاة' },
+];
+
 const toLocalInputValue = (dateLike) => {
   const d = new Date(dateLike);
   const offsetMs = d.getTimezoneOffset() * 60000;
@@ -56,6 +67,7 @@ function SupplierDashboard() {
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState(null);
   const [toast, setToast] = useState('');
+  const [activeTab, setActiveTab] = useState('OPEN');
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingPoolId, setEditingPoolId] = useState(null);
@@ -399,6 +411,9 @@ function SupplierDashboard() {
     );
   };
 
+  const currentTab = STATUS_TABS.find((t) => t.key === activeTab);
+  const visiblePools = pools.filter((p) => currentTab.statuses.includes(p.status));
+
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
       <AnimatedPage>
@@ -425,11 +440,32 @@ function SupplierDashboard() {
             ما في سلات بالمنصة لهلق — اضغطي "اقتراح سلة جديدة" لتبدئي
           </Alert>
         ) : (
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2.5 }}>
-            {pools.map((pool) => (
-              <PoolCard key={pool._id} pool={pool} action={renderAction(pool)} />
-            ))}
-          </Box>
+          <>
+            <Tabs
+              value={activeTab}
+              onChange={(e, v) => setActiveTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ mb: 3, borderBottom: '1px solid #EEF2F6' }}
+            >
+              {STATUS_TABS.map((tab) => {
+                const count = pools.filter((p) => tab.statuses.includes(p.status)).length;
+                return <Tab key={tab.key} value={tab.key} label={`${tab.label} (${count})`} sx={{ fontWeight: 700 }} />;
+              })}
+            </Tabs>
+
+            {visiblePools.length === 0 ? (
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                {STATUS_TABS.find((t) => t.key === activeTab)?.empty}
+              </Alert>
+            ) : (
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2.5 }}>
+                {visiblePools.map((pool) => (
+                  <PoolCard key={pool._id} pool={pool} action={renderAction(pool)} />
+                ))}
+              </Box>
+            )}
+          </>
         )}
       </AnimatedPage>
 

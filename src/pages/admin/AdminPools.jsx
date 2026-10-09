@@ -8,7 +8,6 @@ import {
   CircularProgress,
   Alert,
   TextField,
-  MenuItem,
   Button,
   Dialog,
   DialogTitle,
@@ -16,6 +15,8 @@ import {
   DialogActions,
   Autocomplete,
   Snackbar,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
@@ -30,11 +31,20 @@ const STATUS_STYLES = {
   CANCELLED: { label: 'ملغاة', bg: '#FDECEC', color: '#DC2626' },
 };
 
+// 'ALL' first, then one tab per lifecycle stage (expired + cancelled share a tab)
+const STATUS_TABS = [
+  { key: 'ALL', label: 'الكل', statuses: null },
+  { key: 'OPEN', label: 'مفتوحة', statuses: ['OPEN'] },
+  { key: 'PENDING', label: 'بانتظار التأكيد', statuses: ['PENDING_SUPPLIER_CONFIRMATION'] },
+  { key: 'COMPLETED', label: 'مؤكّدة', statuses: ['COMPLETED'] },
+  { key: 'CLOSED', label: 'منتهية وملغاة', statuses: ['EXPIRED', 'CANCELLED'] },
+];
+
 function AdminPools() {
   const navigate = useNavigate();
   const [pools, setPools] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [activeTab, setActiveTab] = useState('ALL');
   const [actingId, setActingId] = useState(null);
   const [toast, setToast] = useState('');
 
@@ -50,7 +60,7 @@ function AdminPools() {
   const loadPools = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/pools', { params: statusFilter ? { status: statusFilter } : {} });
+      const res = await api.get('/pools');
       setPools(res.data.pools);
     } catch {
       // stays empty, table shows the "no pools" state
@@ -61,7 +71,7 @@ function AdminPools() {
 
   useEffect(() => {
     loadPools();
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => {
     api.get('/categories').then((res) => setCategories(res.data.categories)).catch(() => {});
@@ -127,6 +137,9 @@ function AdminPools() {
     }
   };
 
+  const matchesTab = (pool, tab) => !tab.statuses || tab.statuses.includes(pool.status);
+  const visiblePools = pools.filter((p) => matchesTab(p, STATUS_TABS.find((t) => t.key === activeTab)));
+
   const navItems = [
     { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
@@ -135,8 +148,6 @@ function AdminPools() {
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
-    { key: 'fines', label: 'الغرامات', onClick: () => navigate('/admin/fines') },
-    { key: 'settings', label: 'الإعدادات المالية', onClick: () => navigate('/admin/settings') },
   ];
 
   const headerCard = (
@@ -149,26 +160,29 @@ function AdminPools() {
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
       <AnimatedPage>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h5" fontWeight={800}>
-            السلات
-          </Typography>
-          <TextField select size="small" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} sx={{ minWidth: 200 }}>
-            <MenuItem value="">كل الحالات</MenuItem>
-            <MenuItem value="OPEN">مفتوحة</MenuItem>
-            <MenuItem value="PENDING_SUPPLIER_CONFIRMATION">بانتظار التأكيد</MenuItem>
-            <MenuItem value="COMPLETED">مؤكّدة</MenuItem>
-            <MenuItem value="EXPIRED">منتهية</MenuItem>
-            <MenuItem value="CANCELLED">ملغاة</MenuItem>
-          </TextField>
-        </Box>
+        <Typography variant="h5" fontWeight={800} sx={{ mb: 2 }}>
+          السلات
+        </Typography>
+
+        <Tabs
+          value={activeTab}
+          onChange={(e, v) => setActiveTab(v)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ mb: 2.5, borderBottom: '1px solid #EEF2F6' }}
+        >
+          {STATUS_TABS.map((tab) => {
+            const count = pools.filter((p) => matchesTab(p, tab)).length;
+            return <Tab key={tab.key} value={tab.key} label={`${tab.label} (${count})`} sx={{ fontWeight: 700 }} />;
+          })}
+        </Tabs>
 
         <Paper sx={{ p: 2.5, borderRadius: 3 }} elevation={0}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
               <CircularProgress color="primary" />
             </Box>
-          ) : pools.length === 0 ? (
+          ) : visiblePools.length === 0 ? (
             <Alert severity="info" sx={{ borderRadius: 2 }}>
               ما في سلات مطابقة
             </Alert>
@@ -185,7 +199,7 @@ function AdminPools() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pools.map((pool) => {
+                  {visiblePools.map((pool) => {
                     const status = STATUS_STYLES[pool.status] || STATUS_STYLES.OPEN;
                     const categoryLabel = (pool.categoryIds || []).map((c) => c.name).join('، ');
                     const busy = actingId === pool._id;

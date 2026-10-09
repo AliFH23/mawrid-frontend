@@ -40,7 +40,8 @@ const FEE_STATUS = {
 };
 
 const DELIVERY_STATUS = {
-  PENDING_DELIVERY: { label: 'بانتظار الاستلام', bg: '#FEF3E2', color: '#B45309' },
+  PENDING_DELIVERY: { label: 'بانتظار شحن المورد', bg: '#FEF3E2', color: '#B45309' },
+  OUT_FOR_DELIVERY: { label: 'في الطريق إليك', bg: '#EFF6FF', color: '#1D4ED8' },
   DELIVERED: { label: 'تم الاستلام', bg: '#E7F8F0', color: '#047857' },
 };
 
@@ -224,7 +225,7 @@ function BuyerHistory() {
               const needsOnlinePayment = !isCash && pool.status === 'COMPLETED' && p.finalPaymentStatus === 'PENDING';
               const canConfirmReceipt =
                 pool.status === 'COMPLETED' &&
-                p.deliveryStatus === 'PENDING_DELIVERY' &&
+                p.deliveryStatus === 'OUT_FOR_DELIVERY' &&
                 (isCash || p.finalPaymentStatus === 'PAID');
               const canLeave = p.status === 'ACTIVE' && (pool.status === 'OPEN' || pool.status === 'PENDING_SUPPLIER_CONFIRMATION');
               const canRate = p.deliveryStatus === 'DELIVERED' && !p.rated;
@@ -258,6 +259,13 @@ function BuyerHistory() {
                       )}
                       {pool.status === 'COMPLETED' && (
                         <Chip label={deliveryStatus.label} size="small" sx={{ bgcolor: deliveryStatus.bg, color: deliveryStatus.color, fontWeight: 700, fontSize: 11 }} />
+                      )}
+                      {p.deliveryStatus === 'OUT_FOR_DELIVERY' && p.expectedDeliveryDate && (
+                        <Chip
+                          label={`التوصيل المتوقّع: ${new Date(p.expectedDeliveryDate).toLocaleDateString('ar-EG')}`}
+                          size="small"
+                          sx={{ bgcolor: '#F1F5F9', color: '#475569', fontWeight: 700, fontSize: 11 }}
+                        />
                       )}
                       {p.rated && (
                         <Chip icon={<StarIcon sx={{ fontSize: 14 }} />} label="تم التقييم" size="small" sx={{ bgcolor: '#FFF7ED', color: '#C2410C', fontWeight: 700, fontSize: 11 }} />
