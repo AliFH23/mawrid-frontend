@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Chip, CircularProgress, Button, Snackbar, TextField, MenuItem } from '@mui/material';
+import { Box, Typography, Paper, Chip, CircularProgress, Button, Snackbar, TextField, MenuItem, InputAdornment } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
@@ -14,6 +15,7 @@ function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState('');
   const [busyId, setBusyId] = useState(null);
   const [toast, setToast] = useState('');
+  const [searchId, setSearchId] = useState('');
 
   const loadUsers = async () => {
     setLoading(true);
@@ -43,6 +45,12 @@ function AdminUsers() {
     }
   };
 
+  const handleSearchById = (e) => {
+    e.preventDefault();
+    const id = searchId.trim().toUpperCase();
+    if (id) navigate(`/admin/lookup/${id}`);
+  };
+
   const navItems = [
     { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
@@ -69,18 +77,37 @@ function AdminUsers() {
           <Typography variant="h5" fontWeight={800}>
             المستخدمون
           </Typography>
-          <TextField
-            select
-            size="small"
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="">كل الأدوار</MenuItem>
-            <MenuItem value="buyer">مشروع صغير</MenuItem>
-            <MenuItem value="supplier">مورد</MenuItem>
-            <MenuItem value="admin">مدير</MenuItem>
-          </TextField>
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+            <Box component="form" onSubmit={handleSearchById}>
+              <TextField
+                size="small"
+                placeholder="بحث برقم المستخدم SHP-1001"
+                value={searchId}
+                onChange={(e) => setSearchId(e.target.value)}
+                inputProps={{ dir: 'ltr', style: { textAlign: 'left' } }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{ minWidth: 240 }}
+              />
+            </Box>
+            <TextField
+              select
+              size="small"
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value)}
+              sx={{ minWidth: 180 }}
+            >
+              <MenuItem value="">كل الأدوار</MenuItem>
+              <MenuItem value="buyer">مشروع صغير</MenuItem>
+              <MenuItem value="supplier">مورد</MenuItem>
+              <MenuItem value="admin">مدير</MenuItem>
+            </TextField>
+          </Box>
         </Box>
 
         <Paper sx={{ p: 2.5, borderRadius: 3 }} elevation={0}>
@@ -93,7 +120,7 @@ function AdminUsers() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    {['الاسم', 'البريد الإلكتروني', 'الهاتف', 'الدور', 'الحالة', ''].map((h) => (
+                    {['الرقم', 'الاسم', 'البريد الإلكتروني', 'الهاتف', 'الدور', 'الحالة', ''].map((h) => (
                       <th
                         key={h}
                         style={{ textAlign: 'right', fontSize: 12, color: '#94A3B8', padding: '10px 12px', borderBottom: '1px solid #EEF2F6' }}
@@ -106,6 +133,9 @@ function AdminUsers() {
                 <tbody>
                   {users.map((user) => (
                     <tr key={user._id}>
+                      <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, fontWeight: 700, direction: 'ltr', textAlign: 'right', letterSpacing: 0.5 }}>
+                        {user.publicId || '—'}
+                      </td>
                       <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontWeight: 700, fontSize: 14 }}>{user.name}</td>
                       <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>{user.email}</td>
                       <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>{user.phone}</td>
@@ -122,7 +152,16 @@ function AdminUsers() {
                           }}
                         />
                       </td>
-                      <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA' }}>
+                      <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', whiteSpace: 'nowrap' }}>
+                        <Button
+                          size="small"
+                          variant="text"
+                          disabled={!user.publicId}
+                          onClick={() => navigate(`/admin/lookup/${user.publicId}`)}
+                          sx={{ ml: 1 }}
+                        >
+                          الملف
+                        </Button>
                         <Button
                           size="small"
                           variant="outlined"

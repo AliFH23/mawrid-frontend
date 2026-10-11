@@ -20,6 +20,7 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
+import ReliabilityBadge from '../../components/ReliabilityBadge.jsx';
 import api from '../../api/axios.js';
 
 const STATUS_STYLES = {
@@ -252,7 +253,7 @@ function PoolDetail() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    {['المحل', 'صاحب المحل', 'الكمية', 'قيمة الطلب', 'رسم الالتزام', 'طريقة الدفع', ...(pool.status === 'COMPLETED' ? ['التوصيل'] : [])].map((h) => (
+                    {['المحل', 'موثوقية المحل', 'صاحب المحل', 'الكمية', 'قيمة الطلب', 'رسم الالتزام', 'طريقة الدفع', ...(pool.status === 'COMPLETED' ? ['التوصيل'] : [])].map((h) => (
                       <th key={h} style={{ textAlign: 'right', fontSize: 12, color: '#94A3B8', padding: '10px 12px', borderBottom: '1px solid #EEF2F6' }}>
                         {h}
                       </th>
@@ -266,6 +267,9 @@ function PoolDetail() {
                       <tr key={p._id}>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontWeight: 700, fontSize: 14 }}>
                           {p.shopId?.shopName || '—'}
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA' }}>
+                          <ReliabilityBadge reliability={p.reliability} />
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>
                           {p.shopId?.userId?.name || '—'} · {p.shopId?.userId?.phone || ''}

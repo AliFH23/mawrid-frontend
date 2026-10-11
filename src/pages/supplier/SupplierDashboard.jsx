@@ -40,6 +40,7 @@ const EMPTY_FORM = {
   description: '',
   categories: [],
   unitPrice: '',
+  marketPrice: '',
   minQuantity: '',
   maxQuantity: '',
   expiryDate: '',
@@ -242,6 +243,7 @@ function SupplierDashboard() {
       description: pool.description || '',
       categories: pool.categoryIds || [],
       unitPrice: String(pool.unitPrice),
+      marketPrice: pool.marketPrice ? String(pool.marketPrice) : '',
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
       expiryDate: pool.expiryDate ? toLocalInputValue(pool.expiryDate) : '',
@@ -253,10 +255,15 @@ function SupplierDashboard() {
 
   const handleSavePool = async () => {
     setDialogError('');
-    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate, productExpiryDate } = form;
+    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate, productExpiryDate, marketPrice } = form;
 
     if (!productName || cats.length === 0 || !selectedZone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
+      return;
+    }
+
+    if (marketPrice && Number(marketPrice) <= Number(unitPrice)) {
+      setDialogError('سعر السوق لازم يكون أعلى من سعر الوحدة، وإلا ما في توفير نعرضه');
       return;
     }
 
@@ -275,6 +282,7 @@ function SupplierDashboard() {
       categoryIds: cats.map((c) => c._id),
       deliveryZone: selectedZone._id,
       unitPrice: Number(unitPrice),
+      marketPrice: marketPrice ? Number(marketPrice) : null,
       minQuantity: Number(minQuantity),
       maxQuantity: Number(maxQuantity),
       expiryDate: new Date(expiryDate).toISOString(),
@@ -654,6 +662,15 @@ function SupplierDashboard() {
             label="سعر الوحدة (د.أ)"
             value={form.unitPrice}
             onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            type="number"
+            label="سعر السوق العادي (اختياري)"
+            helperText="لو عبّيته، المحلات بتشوف نسبة التوفير على السلة"
+            value={form.marketPrice}
+            onChange={(e) => setForm({ ...form, marketPrice: e.target.value })}
             sx={{ mb: 2 }}
           />
           <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>

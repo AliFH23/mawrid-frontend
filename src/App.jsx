@@ -24,6 +24,7 @@ import AdminZones from './pages/admin/AdminZones.jsx';
 import AdminTransactions from './pages/admin/AdminTransactions.jsx';
 import AdminSettings from './pages/admin/AdminSettings.jsx';
 import AdminFines from './pages/admin/AdminFines.jsx';
+import AdminUserLookup from './pages/admin/AdminUserLookup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function App() {
@@ -63,6 +64,8 @@ function App() {
       <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AdminTransactions /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
       <Route path="/admin/fines" element={<ProtectedRoute allowedRoles={['admin']}><AdminFines /></ProtectedRoute>} />
+      <Route path="/admin/lookup" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserLookup /></ProtectedRoute>} />
+      <Route path="/admin/lookup/:publicId" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserLookup /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
