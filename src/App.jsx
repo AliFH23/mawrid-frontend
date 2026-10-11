@@ -7,10 +7,12 @@ import AdminLogin from './pages/auth/AdminLogin.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ShopSetup from './pages/buyer/ShopSetup.jsx';
 import BuyerDashboard from './pages/buyer/BuyerDashboard.jsx';
+import BuyerRequests from './pages/buyer/BuyerRequests.jsx';
 import BuyerHistory from './pages/buyer/BuyerHistory.jsx';
 import ShopSettings from './pages/buyer/ShopSettings.jsx';
 import SupplierSetup from './pages/supplier/SupplierSetup.jsx';
 import SupplierDashboard from './pages/supplier/SupplierDashboard.jsx';
+import SupplierRequests from './pages/supplier/SupplierRequests.jsx';
 import SupplierOrders from './pages/supplier/SupplierOrders.jsx';
 import SupplierProfile from './pages/supplier/SupplierProfile.jsx';
 import AdminDashboard from './pages/admin/AdminDashboard.jsx';
@@ -20,8 +22,8 @@ import AdminUsers from './pages/admin/AdminUsers.jsx';
 import AdminCategories from './pages/admin/AdminCategories.jsx';
 import AdminZones from './pages/admin/AdminZones.jsx';
 import AdminTransactions from './pages/admin/AdminTransactions.jsx';
-import AdminSettings from './pages/admin/Adminsettings.jsx';
-import AdminFines from './pages/admin/Adminfines.jsx';
+import AdminSettings from './pages/admin/AdminSettings.jsx';
+import AdminFines from './pages/admin/AdminFines.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function App() {
@@ -40,12 +42,14 @@ function App() {
       {/* buyer only */}
       <Route path="/shop/setup" element={<ProtectedRoute allowedRoles={['buyer']}><ShopSetup /></ProtectedRoute>} />
       <Route path="/shop" element={<ProtectedRoute allowedRoles={['buyer']}><BuyerDashboard /></ProtectedRoute>} />
+      <Route path="/shop/requests" element={<ProtectedRoute allowedRoles={['buyer']}><BuyerRequests /></ProtectedRoute>} />
       <Route path="/shop/history" element={<ProtectedRoute allowedRoles={['buyer']}><BuyerHistory /></ProtectedRoute>} />
       <Route path="/shop/settings" element={<ProtectedRoute allowedRoles={['buyer']}><ShopSettings /></ProtectedRoute>} />
 
       {/* supplier only */}
       <Route path="/supplier/setup" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierSetup /></ProtectedRoute>} />
       <Route path="/supplier" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierDashboard /></ProtectedRoute>} />
+      <Route path="/supplier/requests" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierRequests /></ProtectedRoute>} />
       <Route path="/supplier/orders" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierOrders /></ProtectedRoute>} />
       <Route path="/supplier/profile" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierProfile /></ProtectedRoute>} />
 

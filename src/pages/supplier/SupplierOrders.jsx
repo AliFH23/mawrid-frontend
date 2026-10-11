@@ -28,6 +28,7 @@ function SupplierOrders() {
 
   const navItems = [
     { key: 'pools', label: 'سلاتي', onClick: () => navigate('/supplier') },
+    { key: 'requests', label: 'طلبات السوق', onClick: () => navigate('/supplier/requests') },
     { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
     { key: 'profile', label: 'ملف الشركة', onClick: () => navigate('/supplier/profile') },
   ];

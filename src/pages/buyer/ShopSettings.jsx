@@ -77,6 +77,7 @@ function ShopSettings() {
 
   const navItems = [
     { key: 'pools', label: 'السلات المتاحة', onClick: () => navigate('/shop') },
+    { key: 'requests', label: 'طلبات السوق', onClick: () => navigate('/shop/requests') },
     { key: 'history', label: 'سلاتي وطلباتي', onClick: () => navigate('/shop/history') },
     { key: 'settings', label: 'إعدادات المحل', onClick: () => navigate('/shop/settings') },
   ];

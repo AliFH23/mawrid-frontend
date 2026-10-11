@@ -126,6 +126,7 @@ function PoolDetail() {
       ]
     : [
         { key: 'pools', label: 'سلاتي', onClick: () => navigate('/supplier') },
+        { key: 'requests', label: 'طلبات السوق', onClick: () => navigate('/supplier/requests') },
         { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
         { key: 'profile', label: 'ملف الشركة', onClick: () => navigate('/supplier/profile') },
       ];
@@ -211,6 +212,12 @@ function PoolDetail() {
               <Typography variant="caption" color="text.secondary">تاريخ الانتهاء</Typography>
               <Typography fontWeight={800}>{new Date(pool.expiryDate).toLocaleDateString('ar-EG')}</Typography>
             </Box>
+            {pool.productExpiryDate && (
+              <Box>
+                <Typography variant="caption" color="text.secondary">تاريخ انتهاء المنتج</Typography>
+                <Typography fontWeight={800}>{new Date(pool.productExpiryDate).toLocaleDateString('ar-EG')}</Typography>
+              </Box>
+            )}
             <Box>
               <Typography variant="caption" color="text.secondary">عدد المحلات المنضمة</Typography>
               <Typography fontWeight={800}>{participants.length}</Typography>

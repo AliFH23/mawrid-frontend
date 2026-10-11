@@ -31,6 +31,19 @@ const STATUS_STYLES = {
   CANCELLED: { label: 'ملغاة', bg: '#FDECEC', color: '#DC2626' },
 };
 
+const MIN_SHELF_LIFE_DAYS = 30; // must match poolController.js
+
+const toLocalInputValue = (dateLike) => {
+  const d = new Date(dateLike);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
+const addDays = (dateLike, days) => {
+  const d = new Date(dateLike);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
 // 'ALL' first, then one tab per lifecycle stage (expired + cancelled share a tab)
 const STATUS_TABS = [
   { key: 'ALL', label: 'الكل', statuses: null },
@@ -87,17 +100,27 @@ function AdminPools() {
       unitPrice: String(pool.unitPrice),
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
-      expiryDate: pool.expiryDate ? pool.expiryDate.slice(0, 10) : '',
+      expiryDate: pool.expiryDate ? toLocalInputValue(pool.expiryDate) : '',
+      productExpiryDate: pool.productExpiryDate ? toLocalInputValue(pool.productExpiryDate).slice(0, 10) : '',
     });
     presetLocation(pool.deliveryZone?.governorateId || null, pool.deliveryZone || null);
   };
 
   const handleSaveEdit = async () => {
     setDialogError('');
-    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
+    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate, productExpiryDate } = form;
 
     if (!productName || cats.length === 0 || !selectedZone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
+      return;
+    }
+
+    if (cats.some((c) => c.requiresExpiry) && !productExpiryDate) {
+      setDialogError('الفئة المختارة لازم يكون عليها تاريخ انتهاء المنتج');
+      return;
+    }
+    if (productExpiryDate && new Date(`${productExpiryDate}T23:59:59`) < addDays(expiryDate, MIN_SHELF_LIFE_DAYS)) {
+      setDialogError(`تاريخ انتهاء المنتج لازم يكون بعد إغلاق السلة بـ ${MIN_SHELF_LIFE_DAYS} يوم على الأقل`);
       return;
     }
 
@@ -111,7 +134,8 @@ function AdminPools() {
         unitPrice: Number(unitPrice),
         minQuantity: Number(minQuantity),
         maxQuantity: Number(maxQuantity),
-        expiryDate,
+        expiryDate: new Date(expiryDate).toISOString(),
+        productExpiryDate: productExpiryDate ? new Date(`${productExpiryDate}T23:59:59`).toISOString() : null,
       });
       setToast('تم تحديث السلة بنجاح ✓');
       setEditingPool(null);
@@ -321,11 +345,21 @@ function AdminPools() {
               </Box>
               <TextField
                 fullWidth
-                type="date"
-                label="تاريخ الانتهاء"
+                type="datetime-local"
+                label="تاريخ ووقت انتهاء السلة"
                 InputLabelProps={{ shrink: true }}
                 value={form.expiryDate}
                 onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                type="date"
+                label={form.categories.some((c) => c.requiresExpiry) ? 'تاريخ انتهاء المنتج (مطلوب)' : 'تاريخ انتهاء المنتج (اختياري)'}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: form.expiryDate ? toLocalInputValue(addDays(form.expiryDate, MIN_SHELF_LIFE_DAYS)).slice(0, 10) : undefined }}
+                value={form.productExpiryDate}
+                onChange={(e) => setForm({ ...form, productExpiryDate: e.target.value })}
               />
             </>
           )}

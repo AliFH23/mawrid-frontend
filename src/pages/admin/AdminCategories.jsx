@@ -14,10 +14,13 @@ import {
   DialogContent,
   DialogActions,
   Alert,
-  IconButton,
+  Tooltip,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
@@ -29,6 +32,7 @@ function AdminCategories() {
   const [toast, setToast] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [newRequiresExpiry, setNewRequiresExpiry] = useState(false);
   const [creating, setCreating] = useState(false);
   const [dialogError, setDialogError] = useState('');
 
@@ -56,15 +60,40 @@ function AdminCategories() {
     }
     setCreating(true);
     try {
-      await api.post('/categories', { name: newName.trim() });
+      const res = await api.post('/categories', { name: newName.trim() });
+      // creation only takes the name, so the expiry flag goes in a second call
+      if (newRequiresExpiry) {
+        let newId = res.data.category?._id || res.data._id;
+        if (!newId) {
+          // response shape unknown — look the new category up by name instead
+          const list = await api.get('/categories');
+          newId = list.data.categories.find((c) => c.name === newName.trim())?._id;
+        }
+        if (newId) await api.put(`/categories/${newId}`, { requiresExpiry: true });
+      }
       setToast('تمت إضافة الفئة ✓');
       setNewName('');
+      setNewRequiresExpiry(false);
       setDialogOpen(false);
       loadCategories();
     } catch (err) {
       setDialogError(err.response?.data?.message || 'تعذّر إضافة الفئة');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleToggleExpiry = async (cat) => {
+    try {
+      await api.put(`/categories/${cat._id}`, { requiresExpiry: !cat.requiresExpiry });
+      setToast(
+        cat.requiresExpiry
+          ? `تاريخ انتهاء المنتج صار اختياري لفئة "${cat.name}"`
+          : `تاريخ انتهاء المنتج صار مطلوب لفئة "${cat.name}"`
+      );
+      loadCategories();
+    } catch (err) {
+      setToast(err.response?.data?.message || 'تعذّر تحديث الفئة');
     }
   };
 
@@ -119,24 +148,35 @@ function AdminCategories() {
               ما في فئات مضافة لهلق
             </Alert>
           ) : (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-              {categories.map((cat) => (
-                <Chip
-                  key={cat._id}
-                  label={cat.name}
-                  onDelete={() => handleDeactivate(cat._id)}
-                  deleteIcon={<DeleteOutlineIcon />}
-                  sx={{
-                    bgcolor: '#E7F8F0',
-                    color: '#047857',
-                    fontWeight: 700,
-                    fontSize: 13,
-                    py: 2.2,
-                    px: 0.5,
-                  }}
-                />
-              ))}
-            </Box>
+            <>
+              <Alert severity="info" sx={{ mb: 2.5, borderRadius: 2 }}>
+                اضغطي على الفئة لتفعيل أو إلغاء إلزامية تاريخ انتهاء المنتج (مواد غذائية، ألبان...). الفئات الملوّنة بالبرتقالي تتطلب تاريخ انتهاء عند فتح سلة. ما بيأثر على السلات المفتوحة أصلًا.
+              </Alert>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                {categories.map((cat) => (
+                  <Tooltip
+                    key={cat._id}
+                    title={cat.requiresExpiry ? 'تتطلب تاريخ انتهاء — اضغطي لإلغاء الإلزام' : 'اضغطي لجعل تاريخ الانتهاء مطلوب'}
+                  >
+                    <Chip
+                      icon={cat.requiresExpiry ? <EventBusyOutlinedIcon sx={{ fontSize: 16, color: '#B45309 !important' }} /> : undefined}
+                      label={cat.name}
+                      onClick={() => handleToggleExpiry(cat)}
+                      onDelete={() => handleDeactivate(cat._id)}
+                      deleteIcon={<DeleteOutlineIcon />}
+                      sx={{
+                        bgcolor: cat.requiresExpiry ? '#FEF3E2' : '#E7F8F0',
+                        color: cat.requiresExpiry ? '#B45309' : '#047857',
+                        fontWeight: 700,
+                        fontSize: 13,
+                        py: 2.2,
+                        px: 0.5,
+                      }}
+                    />
+                  </Tooltip>
+                ))}
+              </Box>
+            </>
           )}
         </Paper>
       </AnimatedPage>
@@ -156,6 +196,11 @@ function AdminCategories() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             sx={{ mt: 1 }}
+          />
+          <FormControlLabel
+            sx={{ mt: 1.5 }}
+            control={<Checkbox checked={newRequiresExpiry} onChange={(e) => setNewRequiresExpiry(e.target.checked)} />}
+            label="تتطلب تاريخ انتهاء للمنتج (مواد غذائية، ألبان...)"
           />
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 0 }}>

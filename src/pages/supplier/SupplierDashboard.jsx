@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -43,7 +43,11 @@ const EMPTY_FORM = {
   minQuantity: '',
   maxQuantity: '',
   expiryDate: '',
+  productExpiryDate: '',
 };
+
+// must match MIN_SHELF_LIFE_DAYS in poolController.js
+const MIN_SHELF_LIFE_DAYS = 30;
 
 // pool list is split by lifecycle stage; EXPIRED and CANCELLED share one tab
 // because from the supplier's side both mean "nothing left to do here"
@@ -60,8 +64,15 @@ const toLocalInputValue = (dateLike) => {
   return new Date(d.getTime() - offsetMs).toISOString().slice(0, 16);
 };
 
+const addDays = (dateLike, days) => {
+  const d = new Date(dateLike);
+  d.setDate(d.getDate() + days);
+  return d;
+};
+
 function SupplierDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [supplier, setSupplier] = useState(null);
   const [pools, setPools] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +81,8 @@ function SupplierDashboard() {
   const [activeTab, setActiveTab] = useState('OPEN');
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  // set when the dialog was opened from a market request (see SupplierRequests.jsx)
+  const [sourceRequest, setSourceRequest] = useState(null);
   const [editingPoolId, setEditingPoolId] = useState(null);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -125,6 +138,15 @@ function SupplierDashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fromRequest = location.state?.fromRequest;
+    if (fromRequest) {
+      openCreateFromRequest(fromRequest);
+      // clear the navigation state so a page refresh doesn't reopen the dialog
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -183,7 +205,27 @@ function SupplierDashboard() {
     }
   };
 
+  // pre-fill what the market already told us: product, categories, zone, and the total
+  // demand as the minimum quantity. Everything stays editable — price and dates are the
+  // supplier's call.
+  const openCreateFromRequest = (request) => {
+    setEditingPoolId(null);
+    setSourceRequest(request);
+    setForm({
+      ...EMPTY_FORM,
+      productName: request.productName,
+      description: request.description || '',
+      categories: request.categoryIds || [],
+      minQuantity: String(request.totalQuantity),
+      maxQuantity: String(Math.ceil(request.totalQuantity * 1.5)),
+    });
+    presetLocation(request.deliveryZone?.governorateId || null, request.deliveryZone || null);
+    setDialogError('');
+    setDialogOpen(true);
+  };
+
   const openCreateDialog = () => {
+    setSourceRequest(null);
     setEditingPoolId(null);
     setForm(EMPTY_FORM);
     setSelectedGovernorate(null);
@@ -192,6 +234,7 @@ function SupplierDashboard() {
   };
 
   const openEditDialog = (pool) => {
+    setSourceRequest(null);
     setEditingPoolId(pool._id);
     setDialogError('');
     setForm({
@@ -202,6 +245,7 @@ function SupplierDashboard() {
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
       expiryDate: pool.expiryDate ? toLocalInputValue(pool.expiryDate) : '',
+      productExpiryDate: pool.productExpiryDate ? toLocalInputValue(pool.productExpiryDate).slice(0, 10) : '',
     });
     presetLocation(pool.deliveryZone?.governorateId || null, pool.deliveryZone || null);
     setDialogOpen(true);
@@ -209,10 +253,19 @@ function SupplierDashboard() {
 
   const handleSavePool = async () => {
     setDialogError('');
-    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate } = form;
+    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate, productExpiryDate } = form;
 
     if (!productName || cats.length === 0 || !selectedZone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
+      return;
+    }
+
+    if (cats.some((c) => c.requiresExpiry) && !productExpiryDate) {
+      setDialogError('الفئة المختارة لازم يكون عليها تاريخ انتهاء المنتج');
+      return;
+    }
+    if (productExpiryDate && new Date(`${productExpiryDate}T23:59:59`) < addDays(expiryDate, MIN_SHELF_LIFE_DAYS)) {
+      setDialogError(`تاريخ انتهاء المنتج لازم يكون بعد إغلاق السلة بـ ${MIN_SHELF_LIFE_DAYS} يوم على الأقل`);
       return;
     }
 
@@ -225,6 +278,8 @@ function SupplierDashboard() {
       minQuantity: Number(minQuantity),
       maxQuantity: Number(maxQuantity),
       expiryDate: new Date(expiryDate).toISOString(),
+      // end of that day, so a product valid "until the 15th" counts the whole 15th
+      productExpiryDate: productExpiryDate ? new Date(`${productExpiryDate}T23:59:59`).toISOString() : null,
     };
 
     setSaving(true);
@@ -233,8 +288,18 @@ function SupplierDashboard() {
         await api.put(`/pools/${editingPoolId}`, payload);
         setToast('تم تحديث السلة بنجاح ✓');
       } else {
-        await api.post('/pools', payload);
+        const createRes = await api.post('/pools', payload);
         setToast('تم فتح السلة بنجاح ✓');
+        if (sourceRequest) {
+          // link the new pool to the market request so the shops that backed it see it
+          try {
+            await api.put(`/market-requests/${sourceRequest._id}/fulfill`, { poolId: createRes.data.pool._id });
+            setToast('تم فتح السلة وربطها بطلب السوق ✓');
+          } catch {
+            setToast('تم فتح السلة، بس تعذّر ربطها بطلب السوق');
+          }
+          setSourceRequest(null);
+        }
       }
       setDialogOpen(false);
       setForm(EMPTY_FORM);
@@ -341,6 +406,7 @@ function SupplierDashboard() {
 
   const navItems = [
     { key: 'pools', label: 'السلات', onClick: () => navigate('/supplier') },
+    { key: 'requests', label: 'طلبات السوق', onClick: () => navigate('/supplier/requests') },
     { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
     { key: 'profile', label: 'ملف الشركة', onClick: () => navigate('/supplier/profile') },
   ];
@@ -520,6 +586,11 @@ function SupplierDashboard() {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 800 }}>{editingPoolId ? 'تعديل السلة' : 'اقتراح سلة جديدة'}</DialogTitle>
         <DialogContent>
+          {sourceRequest && !editingPoolId && (
+            <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+              مبنية على طلب من السوق: <b>{sourceRequest.supportersCount}</b> محل · <b>{sourceRequest.totalQuantity}</b> وحدة. عبّينا الحد الأدنى والأقصى كاقتراح — عدّليهم، وحددي السعر والموعد.
+            </Alert>
+          )}
           {dialogError && (
             <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
               {dialogError}
@@ -609,6 +680,17 @@ function SupplierDashboard() {
             inputProps={{ min: toLocalInputValue(new Date()) }}
             value={form.expiryDate}
             onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            fullWidth
+            type="date"
+            label={form.categories.some((c) => c.requiresExpiry) ? 'تاريخ انتهاء المنتج (مطلوب)' : 'تاريخ انتهاء المنتج (اختياري)'}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: form.expiryDate ? toLocalInputValue(addDays(form.expiryDate, MIN_SHELF_LIFE_DAYS)).slice(0, 10) : undefined }}
+            helperText={`لازم يكون بعد إغلاق السلة بـ ${MIN_SHELF_LIFE_DAYS} يوم على الأقل، عشان توصل البضاعة وفيها صلاحية كافية`}
+            value={form.productExpiryDate}
+            onChange={(e) => setForm({ ...form, productExpiryDate: e.target.value })}
           />
         </DialogContent>
         <DialogActions sx={{ p: 3, pt: 0 }}>

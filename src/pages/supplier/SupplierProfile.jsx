@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, TextField, Button, Alert, Snackbar, CircularProgress, LinearProgress, Rating } from '@mui/material';
+import { Box, Typography, Paper, TextField, Button, Alert, Snackbar, CircularProgress, LinearProgress } from '@mui/material';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
@@ -53,6 +53,7 @@ function SupplierProfile() {
 
   const navItems = [
     { key: 'pools', label: 'سلاتي', onClick: () => navigate('/supplier') },
+    { key: 'requests', label: 'طلبات السوق', onClick: () => navigate('/supplier/requests') },
     { key: 'orders', label: 'طلبات الشراء المؤكّدة', onClick: () => navigate('/supplier/orders') },
     { key: 'profile', label: 'ملف الشركة', onClick: () => navigate('/supplier/profile') },
   ];
@@ -119,7 +120,7 @@ function SupplierProfile() {
               sx={{ mb: 3 }}
             />
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 2, mb: 3, p: 2, bgcolor: '#F8FAFC', borderRadius: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3, p: 2, bgcolor: '#F8FAFC', borderRadius: 2 }}>
               <Box>
                 <Typography variant="caption" color="text.secondary">درجة الموثوقية</Typography>
                 <Typography fontWeight={800}>{supplier.reliabilityScore} / 100</Typography>
@@ -127,15 +128,6 @@ function SupplierProfile() {
               <Box>
                 <Typography variant="caption" color="text.secondary">عدد الرفض</Typography>
                 <Typography fontWeight={800}>{supplier.rejectionCount}</Typography>
-              </Box>
-              <Box>
-                <Typography variant="caption" color="text.secondary">تقييم المحلات</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Rating value={supplier.averageRating || 0} precision={0.1} readOnly size="small" />
-                  <Typography fontWeight={800} fontSize={13}>
-                    ({supplier.ratingCount || 0})
-                  </Typography>
-                </Box>
               </Box>
             </Box>
 

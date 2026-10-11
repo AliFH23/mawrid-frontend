@@ -1,6 +1,7 @@
 import { Card, Box, Typography, Chip, LinearProgress } from '@mui/material';
 import { motion } from 'framer-motion';
 import UpdateIcon from '@mui/icons-material/Update';
+import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 
 const STATUS_STYLES = {
   OPEN: { label: 'مفتوحة', bg: '#E7F8F0', color: '#047857' },
@@ -10,6 +11,9 @@ const STATUS_STYLES = {
   CANCELLED: { label: 'ملغاة', bg: '#FDECEC', color: '#DC2626' },
 };
 
+// below this many days of shelf life left after the pool closes, the card warns the shop
+const SHORT_SHELF_LIFE_DAYS = 60;
+
 function PoolCard({ pool, action }) {
   const status = STATUS_STYLES[pool.status] || STATUS_STYLES.OPEN;
   const percentage = Math.min(100, Math.round((pool.currentQuantity / pool.minQuantity) * 100));
@@ -17,6 +21,11 @@ function PoolCard({ pool, action }) {
   const categoryLabel = Array.isArray(pool.categoryIds)
     ? pool.categoryIds.map((c) => c.name).join('، ')
     : pool.categoryIds?.name || '';
+
+  const shelfLifeDays = pool.productExpiryDate
+    ? Math.floor((new Date(pool.productExpiryDate) - new Date(pool.expiryDate)) / 86400000)
+    : null;
+  const isShortShelfLife = shelfLifeDays !== null && shelfLifeDays < SHORT_SHELF_LIFE_DAYS;
 
   return (
     <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
@@ -67,6 +76,16 @@ function PoolCard({ pool, action }) {
             {new Date(pool.expiryDate).toLocaleDateString('ar-EG')}
           </Typography>
         </Box>
+
+        {pool.productExpiryDate && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1.5 }}>
+            <EventBusyOutlinedIcon sx={{ fontSize: 16, color: isShortShelfLife ? '#B45309' : '#64748B' }} />
+            <Typography variant="caption" sx={{ color: isShortShelfLife ? '#B45309' : 'text.secondary', fontWeight: isShortShelfLife ? 700 : 400 }}>
+              ينتهي المنتج: {new Date(pool.productExpiryDate).toLocaleDateString('ar-EG')}
+              {isShortShelfLife ? ' — صلاحية قصيرة' : ''}
+            </Typography>
+          </Box>
+        )}
 
         {/* footer stacked vertically: price row on top, actions get their own
             full-width row below so they can wrap cleanly no matter how many
