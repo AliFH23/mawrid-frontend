@@ -20,8 +20,10 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
+import MapPicker from '../../components/MapPicker.jsx';
 import api from '../../api/axios.js';
 
 function AdminZones() {
@@ -39,6 +41,8 @@ function AdminZones() {
   const [newZoneName, setNewZoneName] = useState('');
   const [dialogError, setDialogError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [centerZone, setCenterZone] = useState(null); // the zone whose map location is being set
+  const [centerPin, setCenterPin] = useState(null);
 
   const loadGovernorates = async () => {
     setLoading(true);
@@ -116,6 +120,26 @@ function AdminZones() {
     }
   };
 
+  const openCenterDialog = (zone) => {
+    setDialogError('');
+    setCenterZone(zone);
+    setCenterPin(zone.center?.lat != null ? { lat: zone.center.lat, lng: zone.center.lng } : null);
+  };
+
+  const handleSaveCenter = async () => {
+    setSaving(true);
+    try {
+      await api.put(`/delivery-zones/${centerZone._id}`, { center: centerPin });
+      setToast('تم حفظ موقع المنطقة ✓');
+      setCenterZone(null);
+      loadZones(selectedGov._id);
+    } catch (err) {
+      setDialogError(err.response?.data?.message || 'تعذّر حفظ الموقع');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteZone = async (id) => {
     if (!window.confirm('متأكد بدك توقفي هالمنطقة؟')) return;
     try {
@@ -135,8 +159,6 @@ function AdminZones() {
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
-    { key: 'fines', label: 'الغرامات', onClick: () => navigate('/admin/fines') },
-    { key: 'settings', label: 'الإعدادات المالية', onClick: () => navigate('/admin/settings') },
   ];
 
   const headerCard = (
@@ -215,17 +237,37 @@ function AdminZones() {
                   ما في مناطق مضافة لهالمحافظة لهلق
                 </Alert>
               ) : (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-                  {zones.map((zone) => (
-                    <Chip
-                      key={zone._id}
-                      label={zone.name}
-                      onDelete={() => handleDeleteZone(zone._id)}
-                      deleteIcon={<DeleteOutlineIcon />}
-                      sx={{ bgcolor: '#F1F5F9', color: '#334155', fontWeight: 600, fontSize: 13, py: 2.2, px: 0.5 }}
-                    />
-                  ))}
-                </Box>
+                <>
+                  {zones.some((z) => z.center?.lat == null) && (
+                    <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+                      {zones.filter((z) => z.center?.lat == null).length} منطقة بدون موقع على الخريطة (برتقالية). اضغط على المنطقة وحدد مركزها عشان تنكشف تلقائي من دبوس المحل.
+                    </Alert>
+                  )}
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                    {zones.map((zone) => {
+                      const hasCenter = zone.center?.lat != null;
+                      return (
+                        <Chip
+                          key={zone._id}
+                          icon={<PlaceOutlinedIcon />}
+                          label={zone.name}
+                          onClick={() => openCenterDialog(zone)}
+                          onDelete={() => handleDeleteZone(zone._id)}
+                          deleteIcon={<DeleteOutlineIcon />}
+                          sx={{
+                            bgcolor: hasCenter ? '#E7F8F0' : '#FEF3E2',
+                            color: hasCenter ? '#047857' : '#B45309',
+                            '& .MuiChip-icon': { color: 'inherit' },
+                            fontWeight: 600,
+                            fontSize: 13,
+                            py: 2.2,
+                            px: 0.5,
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </>
               )}
             </Paper>
           </Box>
@@ -282,6 +324,31 @@ function AdminZones() {
           </Button>
           <Button variant="contained" color="primary" disabled={saving} onClick={handleAddZone}>
             {saving ? 'جاري الإضافة...' : 'إضافة'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={!!centerZone} onClose={() => setCenterZone(null)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ fontWeight: 800 }}>
+          موقع منطقة {centerZone?.name} ({selectedGov?.name})
+        </DialogTitle>
+        <DialogContent>
+          {dialogError && (
+            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>
+              {dialogError}
+            </Alert>
+          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            اضغط على وسط المنطقة (القصبة). أي دبوس بيحطه محل بيروح لأقرب مركز منطقة.
+          </Typography>
+          <MapPicker value={centerPin} onChange={setCenterPin} height={420} onLocateError={setDialogError} />
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setCenterZone(null)} color="secondary">
+            إلغاء
+          </Button>
+          <Button variant="contained" color="primary" disabled={saving || !centerPin} onClick={handleSaveCenter}>
+            {saving ? 'جاري الحفظ...' : 'حفظ الموقع'}
           </Button>
         </DialogActions>
       </Dialog>

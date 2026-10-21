@@ -20,6 +20,7 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
+import ReliabilityBadge from '../../components/ReliabilityBadge.jsx';
 import api from '../../api/axios.js';
 
 const STATUS_STYLES = {
@@ -113,6 +114,27 @@ function PoolDetail() {
     }
   };
 
+  // offer ready orders to the couriers of each shop's zone (or take an offer back)
+  const handleOfferAll = async () => {
+    try {
+      const res = await api.put(`/participations/pool/${id}/offer-couriers`);
+      setToast(`تم عرض ${res.data.offeredCount} طلب على المناديب ✓`);
+      loadData();
+    } catch (err) {
+      setToast(err.response?.data?.message || 'تعذّر عرض الطلبات على المناديب');
+    }
+  };
+
+  const handleOfferOne = async (participation, offer) => {
+    try {
+      await api.put(`/participations/${participation._id}/offer-couriers`, { offer });
+      setToast(offer ? 'تم عرض الطلب على المناديب ✓' : 'تم سحب العرض');
+      loadData();
+    } catch (err) {
+      setToast(err.response?.data?.message || 'تعذّر تنفيذ العملية');
+    }
+  };
+
   const backPath = isAdmin ? '/admin/pools' : '/supplier';
   const navItems = isAdmin
     ? [
@@ -166,7 +188,9 @@ function PoolDetail() {
     p.status === 'ACTIVE' &&
     p.deliveryStatus === 'PENDING_DELIVERY' &&
     (p.paymentMethod === 'CASH' || p.finalPaymentStatus === 'PAID');
-  const readyCount = participants.filter(isShippable).length;
+  // a claimed order is the courier's to deliver, so it's not shippable from here
+  const readyCount = participants.filter((p) => isShippable(p) && !p.courierId).length;
+  const offerableCount = participants.filter((p) => isShippable(p) && !p.courierId && !p.offeredToCouriers).length;
 
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
@@ -230,15 +254,20 @@ function PoolDetail() {
             المحلات المشاركة
           </Typography>
           {canManageShipping && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<LocalShippingOutlinedIcon />}
-              disabled={readyCount === 0}
-              onClick={() => openShipDialog({ type: 'all' })}
-            >
-              {readyCount > 0 ? `شحن كل الطلبات الجاهزة (${readyCount})` : 'ما في طلبات جاهزة للشحن'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <Button variant="outlined" color="primary" disabled={offerableCount === 0} onClick={handleOfferAll}>
+                {offerableCount > 0 ? `عرض الجاهزة على المناديب (${offerableCount})` : 'ما في طلبات لعرضها'}
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<LocalShippingOutlinedIcon />}
+                disabled={readyCount === 0}
+                onClick={() => openShipDialog({ type: 'all' })}
+              >
+                {readyCount > 0 ? `شحن كل الطلبات الجاهزة (${readyCount})` : 'ما في طلبات جاهزة للشحن'}
+              </Button>
+            </Box>
           )}
         </Box>
 
@@ -252,7 +281,7 @@ function PoolDetail() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
-                    {['المحل', 'صاحب المحل', 'الكمية', 'قيمة الطلب', 'رسم الالتزام', 'طريقة الدفع', ...(pool.status === 'COMPLETED' ? ['التوصيل'] : [])].map((h) => (
+                    {['المحل', 'موثوقية المحل', 'صاحب المحل', 'الكمية', 'قيمة الطلب', 'رسم الالتزام', 'طريقة الدفع', ...(pool.status === 'COMPLETED' ? ['التوصيل'] : [])].map((h) => (
                       <th key={h} style={{ textAlign: 'right', fontSize: 12, color: '#94A3B8', padding: '10px 12px', borderBottom: '1px solid #EEF2F6' }}>
                         {h}
                       </th>
@@ -266,6 +295,9 @@ function PoolDetail() {
                       <tr key={p._id}>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontWeight: 700, fontSize: 14 }}>
                           {p.shopId?.shopName || '—'}
+                        </td>
+                        <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA' }}>
+                          <ReliabilityBadge reliability={p.reliability} />
                         </td>
                         <td style={{ padding: '14px 12px', borderBottom: '1px solid #F5F7FA', fontSize: 13, color: '#64748B' }}>
                           {p.shopId?.userId?.name || '—'} · {p.shopId?.userId?.phone || ''}
@@ -292,10 +324,28 @@ function PoolDetail() {
                                     fontSize: 11,
                                   }}
                                 />
-                                {canManageShipping && isShippable(p) && (
+                                {canManageShipping && isShippable(p) && !p.courierId && (
                                   <Button size="small" variant="text" onClick={() => openShipDialog({ type: 'one', participation: p })}>
                                     تم الشحن
                                   </Button>
+                                )}
+                                {canManageShipping && isShippable(p) && !p.courierId && !p.offeredToCouriers && (
+                                  <Button size="small" variant="text" onClick={() => handleOfferOne(p, true)}>
+                                    عرض لمندوب
+                                  </Button>
+                                )}
+                                {canManageShipping && isShippable(p) && !p.courierId && p.offeredToCouriers && (
+                                  <>
+                                    <Chip label="معروض للمناديب" size="small" sx={{ bgcolor: '#F3E8FF', color: '#7C3AED', fontWeight: 700, fontSize: 11 }} />
+                                    <Button size="small" variant="text" color="secondary" onClick={() => handleOfferOne(p, false)}>
+                                      سحب العرض
+                                    </Button>
+                                  </>
+                                )}
+                                {p.courierId?.userId && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    المندوب: {p.courierId.userId.name} · {p.courierId.userId.phone}
+                                  </Typography>
                                 )}
                                 {canManageShipping &&
                                   p.deliveryStatus === 'PENDING_DELIVERY' &&

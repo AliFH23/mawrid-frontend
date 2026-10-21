@@ -21,6 +21,8 @@ import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import PoolCard from '../../components/PoolCard.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
+import MyReliabilityCard from '../../components/MyReliabilityCard.jsx';
+import MySavingsCard from '../../components/MySavingsCard.jsx';
 import PaymentMethodDialog from '../../components/PaymentMethodDialog.jsx';
 import api from '../../api/axios.js';
 
@@ -194,6 +196,9 @@ function BuyerDashboard() {
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
       <AnimatedPage>
+        <MySavingsCard />
+        <MyReliabilityCard />
+
         <Typography variant="h5" fontWeight={800} sx={{ mb: 0.5 }}>
           السلات المتاحة
         </Typography>

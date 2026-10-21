@@ -1,11 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Drawer, Typography, List, ListItemButton, ListItemText, IconButton, AppBar, Toolbar } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import { logout } from '../utils/logout.js';
+import api from '../api/axios.js';
 
 const drawerWidth = 260;
+
+// the account's public id (SHP-1001 / SUP-1001) saved at login/register; admins have none
+const getStoredPublicId = () => {
+  try {
+    return JSON.parse(localStorage.getItem('mawrid_user') || '{}').publicId || '';
+  } catch {
+    return '';
+  }
+};
 
 // applied to everything that is navigation chrome rather than page content, so a
 // "Save as PDF" print shows only the page itself (the "@media print" key must stay
@@ -15,6 +25,45 @@ const hideOnPrint = { '@media print': { display: 'none !important' } };
 function DashboardLayout({ navItems, activeKey, headerCard, children }) {
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [idCopied, setIdCopied] = useState(false);
+  const [publicId, setPublicId] = useState(getStoredPublicId());
+
+  // sessions opened before ids existed have no publicId saved: fetch it once and store it,
+  // so those users don't have to log out and in again (admins have none, so nothing happens)
+  useEffect(() => {
+    if (publicId) return;
+    let stored;
+    try {
+      stored = JSON.parse(localStorage.getItem('mawrid_user') || 'null');
+    } catch {
+      return;
+    }
+    if (!stored || stored.role === 'admin') return;
+
+    api
+      .get('/auth/me')
+      .then((res) => {
+        const id = res.data.user?.publicId;
+        if (!id) return;
+        setPublicId(id);
+        try {
+          localStorage.setItem('mawrid_user', JSON.stringify({ ...stored, publicId: id }));
+        } catch {
+          // storage blocked — the badge still shows for this visit
+        }
+      })
+      .catch(() => {});
+  }, [publicId]);
+
+  const copyPublicId = async () => {
+    try {
+      await navigator.clipboard.writeText(publicId);
+      setIdCopied(true);
+      setTimeout(() => setIdCopied(false), 1500);
+    } catch {
+      // clipboard blocked — the id is still visible to copy by hand
+    }
+  };
 
   const drawerContent = (
     <>
@@ -26,6 +75,31 @@ function DashboardLayout({ navItems, activeKey, headerCard, children }) {
       </Box>
 
       {headerCard}
+
+      {publicId && (
+        <Box
+          onClick={copyPublicId}
+          title="اضغط للنسخ"
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            bgcolor: '#111A30',
+            border: '1px dashed #2A3550',
+            borderRadius: 2,
+            px: 1.75,
+            py: 1,
+            mb: 2,
+            mt: -1.5,
+            cursor: 'pointer',
+          }}
+        >
+          <Typography sx={{ color: '#8B95AB', fontSize: 11 }}>{idCopied ? 'تم النسخ' : 'رقم الحساب'}</Typography>
+          <Typography sx={{ color: '#34D399', fontWeight: 800, fontSize: 13, letterSpacing: 1, direction: 'ltr' }}>
+            {publicId}
+          </Typography>
+        </Box>
+      )}
 
       <List sx={{ mt: 1, flexGrow: 1 }}>
         {navItems.map((item) => (

@@ -3,6 +3,9 @@ import Landing from './pages/shared/Landing.jsx';
 import PoolDetail from './pages/shared/PoolDetail.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
+import CourierRegister from './pages/auth/CourierRegister.jsx';
+import CourierSetup from './pages/courier/CourierSetup.jsx';
+import CourierDashboard from './pages/courier/CourierDashboard.jsx';
 import AdminLogin from './pages/auth/AdminLogin.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ShopSetup from './pages/buyer/ShopSetup.jsx';
@@ -24,6 +27,7 @@ import AdminZones from './pages/admin/AdminZones.jsx';
 import AdminTransactions from './pages/admin/AdminTransactions.jsx';
 import AdminSettings from './pages/admin/AdminSettings.jsx';
 import AdminFines from './pages/admin/AdminFines.jsx';
+import AdminUserLookup from './pages/admin/AdminUserLookup.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 function App() {
@@ -33,6 +37,7 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/courier/register" element={<CourierRegister />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
@@ -53,6 +58,10 @@ function App() {
       <Route path="/supplier/orders" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierOrders /></ProtectedRoute>} />
       <Route path="/supplier/profile" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierProfile /></ProtectedRoute>} />
 
+      {/* courier only */}
+      <Route path="/courier/setup" element={<ProtectedRoute allowedRoles={['courier']}><CourierSetup /></ProtectedRoute>} />
+      <Route path="/courier" element={<ProtectedRoute allowedRoles={['courier']}><CourierDashboard /></ProtectedRoute>} />
+
       {/* admin only */}
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/pools" element={<ProtectedRoute allowedRoles={['admin']}><AdminPools /></ProtectedRoute>} />
@@ -63,6 +72,8 @@ function App() {
       <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AdminTransactions /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
       <Route path="/admin/fines" element={<ProtectedRoute allowedRoles={['admin']}><AdminFines /></ProtectedRoute>} />
+      <Route path="/admin/lookup" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserLookup /></ProtectedRoute>} />
+      <Route path="/admin/lookup/:publicId" element={<ProtectedRoute allowedRoles={['admin']}><AdminUserLookup /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -25,6 +25,10 @@ function PoolCard({ pool, action }) {
   const shelfLifeDays = pool.productExpiryDate
     ? Math.floor((new Date(pool.productExpiryDate) - new Date(pool.expiryDate)) / 86400000)
     : null;
+  const savingPercent =
+    pool.marketPrice && pool.marketPrice > pool.unitPrice
+      ? Math.round(((pool.marketPrice - pool.unitPrice) / pool.marketPrice) * 100)
+      : null;
   const isShortShelfLife = shelfLifeDays !== null && shelfLifeDays < SHORT_SHELF_LIFE_DAYS;
 
   return (
@@ -91,9 +95,23 @@ function PoolCard({ pool, action }) {
             full-width row below so they can wrap cleanly no matter how many
             buttons a given pool status needs */}
         <Box sx={{ pt: 1.5, borderTop: '1px solid #F1F5F9' }}>
-          <Typography fontWeight={800} color="primary.dark" fontSize={14} sx={{ mb: action ? 1 : 0 }}>
-            {pool.unitPrice} د.أ / قطعة
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: action ? 1 : 0 }}>
+            <Typography fontWeight={800} color="primary.dark" fontSize={14}>
+              {pool.unitPrice} د.أ / قطعة
+            </Typography>
+            {savingPercent !== null && (
+              <>
+                <Typography variant="caption" sx={{ color: '#94A3B8', textDecoration: 'line-through' }}>
+                  {pool.marketPrice} د.أ
+                </Typography>
+                <Chip
+                  label={`وفّر ${savingPercent}%`}
+                  size="small"
+                  sx={{ bgcolor: '#E7F8F0', color: '#047857', fontWeight: 800, fontSize: 11, height: 20 }}
+                />
+              </>
+            )}
+          </Box>
           {action && (
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               {action}

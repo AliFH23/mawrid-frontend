@@ -4,6 +4,8 @@ import { Box, Typography, Paper, TextField, Button, Alert, Chip, Autocomplete, S
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import RegNumberField from '../../components/RegNumberField.jsx';
+import LocationMapButton from '../../components/LocationMapButton.jsx';
 import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const MAX_CATEGORIES = 3;
@@ -122,7 +124,7 @@ function ShopSettings() {
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               الرقم التجاري / السجل التجاري
             </Typography>
-            <TextField fullWidth value={regNumber} onChange={(e) => setRegNumber(e.target.value)} sx={{ mb: 2.5 }} />
+            <RegNumberField value={regNumber} onChange={setRegNumber} sx={{ mb: 2.5 }} />
 
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               فئات نشاطك (حتى {MAX_CATEGORIES} فئات)
@@ -142,6 +144,8 @@ function ShopSettings() {
               renderInput={(params) => <TextField {...params} />}
               sx={{ mb: 2.5 }}
             />
+
+            <LocationMapButton onPick={(zone) => presetLocation(zone.governorateId, zone)} />
 
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               المحافظة

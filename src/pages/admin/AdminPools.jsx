@@ -21,6 +21,7 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import LocationMapButton from '../../components/LocationMapButton.jsx';
 import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const STATUS_STYLES = {
@@ -98,6 +99,7 @@ function AdminPools() {
       description: pool.description || '',
       categories: pool.categoryIds || [],
       unitPrice: String(pool.unitPrice),
+      marketPrice: pool.marketPrice ? String(pool.marketPrice) : '',
       minQuantity: String(pool.minQuantity),
       maxQuantity: String(pool.maxQuantity),
       expiryDate: pool.expiryDate ? toLocalInputValue(pool.expiryDate) : '',
@@ -108,10 +110,15 @@ function AdminPools() {
 
   const handleSaveEdit = async () => {
     setDialogError('');
-    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate, productExpiryDate } = form;
+    const { productName, description, categories: cats, unitPrice, minQuantity, maxQuantity, expiryDate, productExpiryDate, marketPrice } = form;
 
     if (!productName || cats.length === 0 || !selectedZone || !unitPrice || !minQuantity || !maxQuantity || !expiryDate) {
       setDialogError('الرجاء تعبئة كل الحقول واختيار فئة واحدة على الأقل');
+      return;
+    }
+
+    if (marketPrice && Number(marketPrice) <= Number(unitPrice)) {
+      setDialogError('سعر السوق لازم يكون أعلى من سعر الوحدة، وإلا ما في توفير نعرضه');
       return;
     }
 
@@ -132,6 +139,7 @@ function AdminPools() {
         categoryIds: cats.map((c) => c._id),
         deliveryZone: selectedZone._id,
         unitPrice: Number(unitPrice),
+        marketPrice: marketPrice ? Number(marketPrice) : null,
         minQuantity: Number(minQuantity),
         maxQuantity: Number(maxQuantity),
         expiryDate: new Date(expiryDate).toISOString(),
@@ -172,8 +180,6 @@ function AdminPools() {
     { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
     { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
     { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
-    { key: 'fines', label: 'الغرامات', onClick: () => navigate('/admin/fines') },
-    { key: 'settings', label: 'الإعدادات المالية', onClick: () => navigate('/admin/settings') },
   ];
 
   const headerCard = (
@@ -301,6 +307,7 @@ function AdminPools() {
                 renderInput={(params) => <TextField {...params} label="الفئات" />}
                 sx={{ mb: 2 }}
               />
+              <LocationMapButton onPick={(zone) => presetLocation(zone.governorateId, zone)} />
               <Autocomplete
                 options={governorates}
                 getOptionLabel={(o) => o.name}
@@ -327,6 +334,14 @@ function AdminPools() {
                 label="سعر الوحدة (د.أ)"
                 value={form.unitPrice}
                 onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                fullWidth
+                type="number"
+                label="سعر السوق العادي (اختياري)"
+                value={form.marketPrice || ''}
+                onChange={(e) => setForm({ ...form, marketPrice: e.target.value })}
                 sx={{ mb: 2 }}
               />
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>

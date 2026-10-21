@@ -22,7 +22,7 @@ import api from '../../api/axios.js';
 import { postAuthRedirect } from '../../utils/postAuthRedirect.js';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 
-const ROLE_LABEL_AR = { buyer: 'مشروع صغير', supplier: 'مورد' };
+const ROLE_LABEL_AR = { buyer: 'مشروع صغير', supplier: 'مورد', courier: 'مندوب توصيل' };
 
 function Login() {
   const navigate = useNavigate();
@@ -51,7 +51,7 @@ function Login() {
       // the role toggle is a real check now — logging in with the wrong tab selected
       // stops here with a clear message instead of silently going to whichever
       // dashboard the account's real role happens to be
-      if (user.role !== role && (user.role === 'buyer' || user.role === 'supplier')) {
+      if (user.role !== role && (user.role === 'buyer' || user.role === 'supplier' || user.role === 'courier')) {
         setError(`هذا الحساب مسجّل كـ "${ROLE_LABEL_AR[user.role]}" — الرجاء اختيار الدور الصحيح من الأعلى`);
         setLoading(false);
         return;
@@ -59,6 +59,17 @@ function Login() {
 
       localStorage.setItem('mawrid_token', token);
       localStorage.setItem('mawrid_user', JSON.stringify(user));
+
+      // couriers have their own pages: straight to the board, or to setup if no profile yet
+      if (user.role === 'courier') {
+        try {
+          await api.get('/couriers/me');
+          navigate('/courier');
+        } catch {
+          navigate('/courier/setup');
+        }
+        return;
+      }
 
       await postAuthRedirect(user, navigate);
     } catch (err) {
@@ -124,6 +135,7 @@ function Login() {
         >
           <ToggleButton value="buyer">مشروع صغير</ToggleButton>
           <ToggleButton value="supplier">مورد</ToggleButton>
+          <ToggleButton value="courier">مندوب توصيل</ToggleButton>
         </ToggleButtonGroup>
 
         {error && (
@@ -200,6 +212,11 @@ function Login() {
           ما عندك حساب؟{' '}
           <Link component={RouterLink} to="/register" underline="hover" sx={{ fontWeight: 700, color: 'primary.dark' }}>
             أنشئ حساب جديد
+          </Link>
+          <br />
+          بدك توصّل طلبات؟{' '}
+          <Link component={RouterLink} to="/courier/register" underline="hover" sx={{ fontWeight: 700, color: 'primary.dark' }}>
+            سجّل كمندوب توصيل
           </Link>
         </Typography>
 

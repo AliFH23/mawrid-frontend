@@ -268,6 +268,13 @@ function BuyerHistory() {
                           sx={{ bgcolor: '#F1F5F9', color: '#475569', fontWeight: 700, fontSize: 11 }}
                         />
                       )}
+                      {p.courierId?.userId && (
+                        <Chip
+                          label={`المندوب: ${p.courierId.userId.name}${p.deliveryStatus === 'OUT_FOR_DELIVERY' ? ` · ${p.courierId.userId.phone}` : ''}`}
+                          size="small"
+                          sx={{ bgcolor: '#F3E8FF', color: '#7C3AED', fontWeight: 700, fontSize: 11 }}
+                        />
+                      )}
                       {p.rated && (
                         <Chip icon={<StarIcon sx={{ fontSize: 14 }} />} label="تم التقييم" size="small" sx={{ bgcolor: '#FFF7ED', color: '#C2410C', fontWeight: 700, fontSize: 11 }} />
                       )}

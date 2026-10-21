@@ -4,6 +4,7 @@ import { Box, Typography, Paper, TextField, Button, Alert, Snackbar, CircularPro
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import RegNumberField from '../../components/RegNumberField.jsx';
 
 function SupplierProfile() {
   const navigate = useNavigate();
@@ -105,7 +106,7 @@ function SupplierProfile() {
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               الرقم التجاري / السجل التجاري
             </Typography>
-            <TextField fullWidth value={regNumber} onChange={(e) => setRegNumber(e.target.value)} sx={{ mb: 2.5 }} />
+            <RegNumberField value={regNumber} onChange={setRegNumber} sx={{ mb: 2.5 }} />
 
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               وصف الشركة

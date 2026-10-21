@@ -37,7 +37,11 @@ export function useLocationPicker() {
   };
 
   const presetLocation = (governorate, zone) => {
-    skipZoneResetRef.current = true;
+    // the "skip the zone reset" flag is consumed by the governorate-change effect, which
+    // only runs when the governorate actually changes. If the pin lands in the governorate
+    // that is already selected, the effect never runs — so don't leave the flag armed, or
+    // the NEXT manual governorate change would wrongly keep the old zone.
+    skipZoneResetRef.current = !!governorate && governorate._id !== selectedGovernorate?._id;
     setSelectedGovernorateState(governorate);
     setSelectedZone(zone);
   };
