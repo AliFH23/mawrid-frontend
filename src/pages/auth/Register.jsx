@@ -31,6 +31,8 @@ import api from '../../api/axios.js';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import { isPasswordStrong, PASSWORD_HINT } from '../../utils/passwordValidation.js';
 import { useLocationPicker } from '../../hooks/useLocationPicker.js';
+import RegNumberField from '../../components/RegNumberField.jsx';
+import LocationMapButton from '../../components/LocationMapButton.jsx';
 
 const MAX_CATEGORIES = 3;
 const STEPS = ['بيانات الحساب', 'بيانات النشاط'];
@@ -52,7 +54,7 @@ function Register() {
   const [categories, setCategories] = useState([]);
   const [selectedCategories, setSelectedCategories] = useState([]);
 
-  const { governorates, zones, zonesLoading, selectedGovernorate, selectedZone, setSelectedGovernorate, setSelectedZone } =
+  const { governorates, zones, zonesLoading, selectedGovernorate, selectedZone, setSelectedGovernorate, setSelectedZone, presetLocation } =
     useLocationPicker();
 
   const [companyName, setCompanyName] = useState('');
@@ -118,6 +120,16 @@ function Register() {
 
     setLoading(true);
     try {
+      // check the business number BEFORE creating the account, otherwise a rejected number
+      // would leave an account with no shop/company behind
+      const regNumber = role === 'buyer' ? shopRegNumber : supplierRegNumber;
+      const check = await api.get('/business/check', { params: { number: regNumber } });
+      if (check.data.status !== 'AVAILABLE') {
+        setError(check.data.message);
+        setLoading(false);
+        return;
+      }
+
       const res = await api.post('/auth/register', { name, email, phone, password, role });
       const { user, token } = res.data;
       localStorage.setItem('mawrid_token', token);
@@ -304,7 +316,7 @@ function Register() {
             <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
               تأكيد كلمة المرور
             </Typography>
-                        <TextField
+            <TextField
               fullWidth
               type={showPassword ? 'text' : 'password'}
               placeholder="أعيدي كتابة كلمة المرور"
@@ -315,13 +327,6 @@ function Register() {
                 startAdornment: (
                   <InputAdornment position="start">
                     <LockOutlinedIcon fontSize="small" sx={{ color: 'text.secondary' }} />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword((s) => !s)} edge="end" size="small">
-                      {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
-                    </IconButton>
                   </InputAdornment>
                 ),
               }}
@@ -363,13 +368,7 @@ function Register() {
                   <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
                     الرقم التجاري / السجل التجاري
                   </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="مثال: 123456"
-                    value={shopRegNumber}
-                    onChange={(e) => setShopRegNumber(e.target.value)}
-                    sx={{ mb: 2.5 }}
-                  />
+                  <RegNumberField value={shopRegNumber} onChange={setShopRegNumber} sx={{ mb: 2.5 }} />
 
                   <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
                     فئات نشاطك (حتى {MAX_CATEGORIES} فئات)
@@ -392,6 +391,8 @@ function Register() {
                     )}
                     sx={{ mb: 2.5 }}
                   />
+
+                  <LocationMapButton onPick={(zone) => presetLocation(zone.governorateId, zone)} />
 
                   <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
                     المحافظة
@@ -437,13 +438,7 @@ function Register() {
                   <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
                     الرقم التجاري / السجل التجاري
                   </Typography>
-                  <TextField
-                    fullWidth
-                    placeholder="مثال: 123456"
-                    value={supplierRegNumber}
-                    onChange={(e) => setSupplierRegNumber(e.target.value)}
-                    sx={{ mb: 2.5 }}
-                  />
+                  <RegNumberField value={supplierRegNumber} onChange={setSupplierRegNumber} sx={{ mb: 2.5 }} />
 
                   <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
                     وصف الشركة (اختياري)

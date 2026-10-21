@@ -6,7 +6,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
 
-const ROLE_LABEL = { admin: 'مدير', supplier: 'مورد', buyer: 'مشروع صغير' };
+const ROLE_LABEL = { admin: 'مدير', supplier: 'مورد', buyer: 'مشروع صغير', courier: 'مندوب توصيل' };
 
 function AdminUsers() {
   const navigate = useNavigate();
@@ -105,6 +105,7 @@ function AdminUsers() {
               <MenuItem value="">كل الأدوار</MenuItem>
               <MenuItem value="buyer">مشروع صغير</MenuItem>
               <MenuItem value="supplier">مورد</MenuItem>
+              <MenuItem value="courier">مندوب توصيل</MenuItem>
               <MenuItem value="admin">مدير</MenuItem>
             </TextField>
           </Box>

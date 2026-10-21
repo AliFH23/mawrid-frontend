@@ -21,6 +21,7 @@ import {
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import LocationMapButton from '../../components/LocationMapButton.jsx';
 import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const STATUS_STYLES = {
@@ -306,6 +307,7 @@ function AdminPools() {
                 renderInput={(params) => <TextField {...params} label="الفئات" />}
                 sx={{ mb: 2 }}
               />
+              <LocationMapButton onPick={(zone) => presetLocation(zone.governorateId, zone)} />
               <Autocomplete
                 options={governorates}
                 getOptionLabel={(o) => o.name}

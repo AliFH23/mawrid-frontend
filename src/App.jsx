@@ -3,6 +3,9 @@ import Landing from './pages/shared/Landing.jsx';
 import PoolDetail from './pages/shared/PoolDetail.jsx';
 import Login from './pages/auth/Login.jsx';
 import Register from './pages/auth/Register.jsx';
+import CourierRegister from './pages/auth/CourierRegister.jsx';
+import CourierSetup from './pages/courier/CourierSetup.jsx';
+import CourierDashboard from './pages/courier/CourierDashboard.jsx';
 import AdminLogin from './pages/auth/AdminLogin.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ShopSetup from './pages/buyer/ShopSetup.jsx';
@@ -34,6 +37,7 @@ function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/courier/register" element={<CourierRegister />} />
       <Route path="/admin/login" element={<AdminLogin />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
 
@@ -53,6 +57,10 @@ function App() {
       <Route path="/supplier/requests" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierRequests /></ProtectedRoute>} />
       <Route path="/supplier/orders" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierOrders /></ProtectedRoute>} />
       <Route path="/supplier/profile" element={<ProtectedRoute allowedRoles={['supplier']}><SupplierProfile /></ProtectedRoute>} />
+
+      {/* courier only */}
+      <Route path="/courier/setup" element={<ProtectedRoute allowedRoles={['courier']}><CourierSetup /></ProtectedRoute>} />
+      <Route path="/courier" element={<ProtectedRoute allowedRoles={['courier']}><CourierDashboard /></ProtectedRoute>} />
 
       {/* admin only */}
       <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />

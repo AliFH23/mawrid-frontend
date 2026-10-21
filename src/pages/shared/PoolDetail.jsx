@@ -114,6 +114,27 @@ function PoolDetail() {
     }
   };
 
+  // offer ready orders to the couriers of each shop's zone (or take an offer back)
+  const handleOfferAll = async () => {
+    try {
+      const res = await api.put(`/participations/pool/${id}/offer-couriers`);
+      setToast(`تم عرض ${res.data.offeredCount} طلب على المناديب ✓`);
+      loadData();
+    } catch (err) {
+      setToast(err.response?.data?.message || 'تعذّر عرض الطلبات على المناديب');
+    }
+  };
+
+  const handleOfferOne = async (participation, offer) => {
+    try {
+      await api.put(`/participations/${participation._id}/offer-couriers`, { offer });
+      setToast(offer ? 'تم عرض الطلب على المناديب ✓' : 'تم سحب العرض');
+      loadData();
+    } catch (err) {
+      setToast(err.response?.data?.message || 'تعذّر تنفيذ العملية');
+    }
+  };
+
   const backPath = isAdmin ? '/admin/pools' : '/supplier';
   const navItems = isAdmin
     ? [
@@ -167,7 +188,9 @@ function PoolDetail() {
     p.status === 'ACTIVE' &&
     p.deliveryStatus === 'PENDING_DELIVERY' &&
     (p.paymentMethod === 'CASH' || p.finalPaymentStatus === 'PAID');
-  const readyCount = participants.filter(isShippable).length;
+  // a claimed order is the courier's to deliver, so it's not shippable from here
+  const readyCount = participants.filter((p) => isShippable(p) && !p.courierId).length;
+  const offerableCount = participants.filter((p) => isShippable(p) && !p.courierId && !p.offeredToCouriers).length;
 
   return (
     <DashboardLayout navItems={navItems} activeKey="pools" headerCard={headerCard}>
@@ -231,15 +254,20 @@ function PoolDetail() {
             المحلات المشاركة
           </Typography>
           {canManageShipping && (
-            <Button
-              variant="contained"
-              color="primary"
-              startIcon={<LocalShippingOutlinedIcon />}
-              disabled={readyCount === 0}
-              onClick={() => openShipDialog({ type: 'all' })}
-            >
-              {readyCount > 0 ? `شحن كل الطلبات الجاهزة (${readyCount})` : 'ما في طلبات جاهزة للشحن'}
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+              <Button variant="outlined" color="primary" disabled={offerableCount === 0} onClick={handleOfferAll}>
+                {offerableCount > 0 ? `عرض الجاهزة على المناديب (${offerableCount})` : 'ما في طلبات لعرضها'}
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<LocalShippingOutlinedIcon />}
+                disabled={readyCount === 0}
+                onClick={() => openShipDialog({ type: 'all' })}
+              >
+                {readyCount > 0 ? `شحن كل الطلبات الجاهزة (${readyCount})` : 'ما في طلبات جاهزة للشحن'}
+              </Button>
+            </Box>
           )}
         </Box>
 
@@ -296,10 +324,28 @@ function PoolDetail() {
                                     fontSize: 11,
                                   }}
                                 />
-                                {canManageShipping && isShippable(p) && (
+                                {canManageShipping && isShippable(p) && !p.courierId && (
                                   <Button size="small" variant="text" onClick={() => openShipDialog({ type: 'one', participation: p })}>
                                     تم الشحن
                                   </Button>
+                                )}
+                                {canManageShipping && isShippable(p) && !p.courierId && !p.offeredToCouriers && (
+                                  <Button size="small" variant="text" onClick={() => handleOfferOne(p, true)}>
+                                    عرض لمندوب
+                                  </Button>
+                                )}
+                                {canManageShipping && isShippable(p) && !p.courierId && p.offeredToCouriers && (
+                                  <>
+                                    <Chip label="معروض للمناديب" size="small" sx={{ bgcolor: '#F3E8FF', color: '#7C3AED', fontWeight: 700, fontSize: 11 }} />
+                                    <Button size="small" variant="text" color="secondary" onClick={() => handleOfferOne(p, false)}>
+                                      سحب العرض
+                                    </Button>
+                                  </>
+                                )}
+                                {p.courierId?.userId && (
+                                  <Typography variant="caption" color="text.secondary">
+                                    المندوب: {p.courierId.userId.name} · {p.courierId.userId.phone}
+                                  </Typography>
                                 )}
                                 {canManageShipping &&
                                   p.deliveryStatus === 'PENDING_DELIVERY' &&

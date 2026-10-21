@@ -33,6 +33,7 @@ import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import PoolCard from '../../components/PoolCard.jsx';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import api from '../../api/axios.js';
+import LocationMapButton from '../../components/LocationMapButton.jsx';
 import { useLocationPicker } from '../../hooks/useLocationPicker.js';
 
 const EMPTY_FORM = {
@@ -636,6 +637,7 @@ function SupplierDashboard() {
             )}
             sx={{ mb: 2 }}
           />
+          <LocationMapButton onPick={(zone) => presetLocation(zone.governorateId, zone)} />
           <Autocomplete
             options={governorates}
             getOptionLabel={(o) => o.name}

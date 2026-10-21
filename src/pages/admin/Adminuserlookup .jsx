@@ -20,7 +20,8 @@ import AnimatedPage from '../../components/AnimatedPage.jsx';
 import ReliabilityBadge from '../../components/ReliabilityBadge.jsx';
 import api from '../../api/axios.js';
 
-const ROLE_LABEL = { supplier: 'مورد', buyer: 'مشروع صغير' };
+const ROLE_LABEL = { supplier: 'مورد', buyer: 'مشروع صغير', courier: 'مندوب توصيل' };
+const VEHICLE_LABEL = { MOTORCYCLE: 'دراجة نارية', CAR: 'سيارة', VAN: 'فان', TRUCK: 'شاحنة' };
 
 const TX_STYLES = {
   COMMITMENT_FEE_PAID: { label: 'رسم التزام مدفوع', bg: '#EFF6FF', color: '#1D4ED8' },
@@ -113,6 +114,8 @@ function AdminUserLookup() {
   const [error, setError] = useState('');
   const [tab, setTab] = useState('finance');
   const [copied, setCopied] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
+  const [notice, setNotice] = useState('');
 
   useEffect(() => {
     setQuery(publicId || '');
@@ -133,6 +136,31 @@ function AdminUserLookup() {
     e.preventDefault();
     const id = query.trim().toUpperCase();
     if (id) navigate(`/admin/lookup/${id}`);
+  };
+
+  // ban / un-ban this account's commercial registration number
+  const toggleBlock = async () => {
+    const number = data.profile.commercialRegistrationNumber;
+    setNotice('');
+    setBlockBusy(true);
+    try {
+      if (data.businessBlocked) {
+        if (!window.confirm(`رفع الحظر عن الرقم ${number}؟ (الحسابات المعطّلة بسببه بتضل معطّلة لحد ما تفعّلها من صفحة المستخدمين)`)) return;
+        await api.delete(`/business/blocked/${encodeURIComponent(number)}`);
+        setNotice('تم رفع الحظر عن الرقم');
+      } else {
+        const reason = window.prompt(`حظر الرقم التجاري ${number} وتعطيل الحسابات المرتبطة فيه. اكتب السبب (اختياري):`);
+        if (reason === null) return; // cancelled
+        const res = await api.post('/business/blocked', { number, reason });
+        setNotice(`تم حظر الرقم وتعطيل ${res.data.deactivatedAccounts} حساب`);
+      }
+      const refreshed = await api.get(`/admin/lookup/${encodeURIComponent(publicId)}`);
+      setData(refreshed.data);
+    } catch (err) {
+      setNotice(err.response?.data?.message || 'تعذّر تنفيذ العملية');
+    } finally {
+      setBlockBusy(false);
+    }
   };
 
   const handleCopy = async () => {
@@ -165,10 +193,22 @@ function AdminUserLookup() {
   );
 
   const isShop = data?.user.role === 'buyer';
+  const isCourier = data?.user.role === 'courier';
   const profile = data?.profile;
   const summary = data?.financialSummary;
 
   const renderSummary = () => {
+    if (isCourier) {
+      const d = data.deliverySummary;
+      if (!d) return null;
+      return (
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 3 }}>
+          <StatTile label="بانتظار الاستلام من المورد" value={d.waitingPickup} />
+          <StatTile label="في الطريق" value={d.outForDelivery} tone="#1D4ED8" />
+          <StatTile label="تم تسليمها" value={d.delivered} tone="#047857" />
+        </Box>
+      );
+    }
     if (!summary) return null;
     if (isShop) {
       return (
@@ -273,7 +313,19 @@ function AdminUserLookup() {
     </tr>
   ));
 
-  const tabs = isShop
+  const deliveryRows = (data?.deliveries || []).map((d) => (
+    <tr key={d._id}>
+      <td style={{ ...TD, fontWeight: 700 }}>{d.poolId?.productName || '—'}</td>
+      <td style={TD}>{d.shopId?.shopName || '—'}</td>
+      <td style={TD}>{d.quantity}</td>
+      <td style={TD}>{DELIVERY_LABEL[d.deliveryStatus] || d.deliveryStatus}</td>
+      <td style={{ ...TD, color: '#64748B' }}>{formatDateTime(d.claimedAt)}</td>
+    </tr>
+  ));
+
+  const tabs = isCourier
+    ? [{ key: 'deliveries', label: `التوصيلات (${deliveryRows.length})` }]
+    : isShop
     ? [
         { key: 'finance', label: `السجل المالي (${transactionRows.length})` },
         { key: 'participations', label: `المشاركات (${participationRows.length})` },
@@ -284,6 +336,8 @@ function AdminUserLookup() {
         { key: 'orders', label: `طلبات الشراء (${orderRows.length})` },
         { key: 'fines', label: `الغرامات (${fineRows.length})` },
       ];
+
+  const activeTab = tabs.some((t) => t.key === tab) ? tab : tabs[0].key;
 
   return (
     <DashboardLayout navItems={navItems} activeKey="users" headerCard={headerCard}>
@@ -334,7 +388,7 @@ function AdminUserLookup() {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2, mb: 2.5 }}>
                 <Box>
                   <Typography variant="h6" fontWeight={800}>
-                    {isShop ? profile?.shopName || data.user.name : profile?.companyName || data.user.name}
+                    {isShop ? profile?.shopName || data.user.name : isCourier ? data.user.name : profile?.companyName || data.user.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {data.user.name}
@@ -372,6 +426,12 @@ function AdminUserLookup() {
                       <ReliabilityBadge reliability={data.reliability} />
                     </InfoRow>
                   </>
+                ) : isCourier ? (
+                  <>
+                    <InfoRow label="المحافظة">{profile?.deliveryZone?.governorateId?.name}</InfoRow>
+                    <InfoRow label="المنطقة">{profile?.deliveryZone?.name}</InfoRow>
+                    <InfoRow label="المركبة">{profile ? VEHICLE_LABEL[profile.vehicleType] || profile.vehicleType : null}</InfoRow>
+                  </>
                 ) : (
                   <>
                     <InfoRow label="درجة الموثوقية">{profile ? `${profile.reliabilityScore} / 100` : null}</InfoRow>
@@ -382,9 +442,25 @@ function AdminUserLookup() {
                 )}
               </Box>
 
+              {profile?.commercialRegistrationNumber && (
+                <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                  <Button size="small" variant="outlined" color={data.businessBlocked ? 'primary' : 'error'} disabled={blockBusy} onClick={toggleBlock}>
+                    {data.businessBlocked ? 'رفع الحظر عن الرقم التجاري' : 'حظر الرقم التجاري'}
+                  </Button>
+                  {data.businessBlocked && (
+                    <Chip label="الرقم التجاري محظور" size="small" sx={{ bgcolor: '#FDECEC', color: '#DC2626', fontWeight: 700 }} />
+                  )}
+                  {notice && (
+                    <Typography variant="caption" color="text.secondary">
+                      {notice}
+                    </Typography>
+                  )}
+                </Box>
+              )}
+
               {!profile && (
                 <Alert severity="info" sx={{ borderRadius: 2, mt: 2 }}>
-                  هالحساب لسا ما أكمل إعداد ملفه ({isShop ? 'المحل' : 'الشركة'})
+                  هالحساب لسا ما أكمل إعداد ملفه ({isShop ? 'المحل' : isCourier ? 'المندوب' : 'الشركة'})
                 </Alert>
               )}
             </Paper>
@@ -392,41 +468,48 @@ function AdminUserLookup() {
             {renderSummary()}
 
             <Paper sx={{ p: 2.5, borderRadius: 3 }} elevation={0}>
-              <Tabs value={tab} onChange={(e, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2, borderBottom: '1px solid #EEF2F6' }}>
+              <Tabs value={activeTab} onChange={(e, v) => setTab(v)} variant="scrollable" scrollButtons="auto" sx={{ mb: 2, borderBottom: '1px solid #EEF2F6' }}>
                 {tabs.map((t) => (
                   <Tab key={t.key} value={t.key} label={t.label} sx={{ fontWeight: 700 }} />
                 ))}
               </Tabs>
 
-              {tab === 'finance' && (
+              {activeTab === 'finance' && (
                 <SimpleTable
                   headers={['التاريخ', 'النوع', 'المبلغ', 'الوصف', 'السلة']}
                   rows={transactionRows}
                   emptyText="ما في معاملات مالية مسجّلة لهالحساب"
                 />
               )}
-              {tab === 'participations' && (
+              {activeTab === 'participations' && (
                 <SimpleTable
                   headers={['السلة', 'الكمية', 'قيمة الطلب', 'طريقة الدفع', 'رسم الالتزام', 'المتبقي', 'التوصيل', 'التاريخ']}
                   rows={participationRows}
                   emptyText="لسا ما انضم لأي سلة"
                 />
               )}
-              {tab === 'pools' && (
+              {activeTab === 'pools' && (
                 <SimpleTable
                   headers={['السلة', 'السعر', 'الكمية', 'الحالة', 'تاريخ الإنشاء', '']}
                   rows={poolRows}
                   emptyText="لسا ما فتح أي سلة"
                 />
               )}
-              {tab === 'orders' && (
+              {activeTab === 'orders' && (
                 <SimpleTable
                   headers={['السلة', 'الكمية', 'الإجمالي', 'عمولة المنصة', 'الحالة', 'سبب الرفض', 'التاريخ']}
                   rows={orderRows}
                   emptyText="ما في طلبات شراء بعد"
                 />
               )}
-              {tab === 'fines' && (
+              {activeTab === 'deliveries' && (
+                <SimpleTable
+                  headers={['المنتج', 'المحل', 'الكمية', 'الحالة', 'وقت الاستلام']}
+                  rows={deliveryRows}
+                  emptyText="لسا ما استلم أي طلب"
+                />
+              )}
+              {activeTab === 'fines' && (
                 <SimpleTable
                   headers={['التاريخ', 'السلة', 'السبب', 'خصم الموثوقية', 'الإحالة']}
                   rows={fineRows}

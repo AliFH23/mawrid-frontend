@@ -14,6 +14,8 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import api from '../../api/axios.js';
 import AnimatedPage from '../../components/AnimatedPage.jsx';
 import { useLocationPicker } from '../../hooks/useLocationPicker.js';
+import RegNumberField from '../../components/RegNumberField.jsx';
+import LocationMapButton from '../../components/LocationMapButton.jsx';
 
 const MAX_CATEGORIES = 3;
 
@@ -35,6 +37,7 @@ function ShopSetup() {
     selectedZone,
     setSelectedGovernorate,
     setSelectedZone,
+    presetLocation,
   } = useLocationPicker();
 
   useEffect(() => {
@@ -124,13 +127,7 @@ function ShopSetup() {
           <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
             الرقم التجاري / السجل التجاري
           </Typography>
-          <TextField
-            fullWidth
-            placeholder="مثال: 123456"
-            value={regNumber}
-            onChange={(e) => setRegNumber(e.target.value)}
-            sx={{ mb: 2.5 }}
-          />
+          <RegNumberField value={regNumber} onChange={setRegNumber} sx={{ mb: 2.5 }} />
 
           <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
             فئات نشاطك (حتى {MAX_CATEGORIES} فئات)
@@ -153,6 +150,8 @@ function ShopSetup() {
             )}
             sx={{ mb: 2.5 }}
           />
+
+          <LocationMapButton onPick={(zone) => presetLocation(zone.governorateId, zone)} />
 
           <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>
             المحافظة
