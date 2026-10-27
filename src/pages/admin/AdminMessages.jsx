@@ -35,7 +35,7 @@ function AdminMessages() {
     }
   };
 
-  const navItems = [
+const navItems = [
     { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
     { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
     { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },

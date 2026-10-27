@@ -155,7 +155,6 @@ function AdminUserLookup() {
     { key: 'fines', label: 'الغرامات', onClick: () => navigate('/admin/fines') },
     { key: 'settings', label: 'الإعدادات المالية', onClick: () => navigate('/admin/settings') },
   ];
-
   const headerCard = (
     <Box sx={{ bgcolor: '#111A30', borderRadius: 2, p: 1.75, mb: 2.5 }}>
       <Typography sx={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>مدير المنصة</Typography>

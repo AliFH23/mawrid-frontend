@@ -46,13 +46,17 @@ const addDays = (dateLike, days) => {
 };
 
 // 'ALL' first, then one tab per lifecycle stage (expired + cancelled share a tab)
-const STATUS_TABS = [
-  { key: 'ALL', label: 'الكل', statuses: null },
-  { key: 'OPEN', label: 'مفتوحة', statuses: ['OPEN'] },
-  { key: 'PENDING', label: 'بانتظار التأكيد', statuses: ['PENDING_SUPPLIER_CONFIRMATION'] },
-  { key: 'COMPLETED', label: 'مؤكّدة', statuses: ['COMPLETED'] },
-  { key: 'CLOSED', label: 'منتهية وملغاة', statuses: ['EXPIRED', 'CANCELLED'] },
-];
+const navItems = [
+    { key: 'overview', label: 'نظرة عامة', onClick: () => navigate('/admin') },
+    { key: 'pools', label: 'السلات', onClick: () => navigate('/admin/pools') },
+    { key: 'orders', label: 'طلبات الشراء', onClick: () => navigate('/admin/orders') },
+    { key: 'transactions', label: 'السجل المالي', onClick: () => navigate('/admin/transactions') },
+    { key: 'users', label: 'المستخدمون', onClick: () => navigate('/admin/users') },
+    { key: 'categories', label: 'الفئات', onClick: () => navigate('/admin/categories') },
+    { key: 'zones', label: 'المحافظات والمناطق', onClick: () => navigate('/admin/zones') },
+    { key: 'fines', label: 'الغرامات', onClick: () => navigate('/admin/fines') },
+    { key: 'settings', label: 'الإعدادات المالية', onClick: () => navigate('/admin/settings') },
+  ];
 
 function AdminPools() {
   const navigate = useNavigate();
